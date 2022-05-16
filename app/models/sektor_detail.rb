@@ -1,0 +1,2 @@
+class SektorDetail < ApplicationRecord
+end

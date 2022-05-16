@@ -1,0 +1,22 @@
+# MySQL.  Versions 4.1 and 5.0 are recommended.
+#
+#
+# Be sure to use new-style password hashing:
+#   http://dev.mysql.com/doc/refman/5.0/en/old-client.html
+development:
+  server_domain_name: ""
+  server_username: ""
+  server_password: ""
+  sektor_input_ftp_file_name: "sektor_input.csv"
+  sektor_output_file_name: "Sektor_Product_Details.csv"
+  anywarenz_input_ftp_file_name: "Anyware Ascent Price List.csv"
+  anywarenz_output_file_name: "Anywarenz_Product_Details.csv"
+  
+production:
+  server_domain_name: ""
+  server_username: ""
+  server_password: ""
+  sektor_input_ftp_file_name: ""
+  sektor_output_file_name: "Sektor_Product_Details.csv"
+  anywarenz_input_ftp_file_name: "Anyware Ascent Price List.csv"
+  anywarenz_output_file_name: "Anywarenz_Product_Details.csv"
