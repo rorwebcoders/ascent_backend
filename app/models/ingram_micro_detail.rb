@@ -1,0 +1,2 @@
+class IngramMicroDetail < ApplicationRecord
+end
