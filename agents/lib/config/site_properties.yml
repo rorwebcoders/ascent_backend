@@ -4,13 +4,21 @@
 # Be sure to use new-style password hashing:
 #   http://dev.mysql.com/doc/refman/5.0/en/old-client.html
 development:
-  server_domain_name: ""
-  server_username: ""
-  server_password: ""
+  server_domain_name: "45.33.32.22"
+  server_username: "ftp_user"
+  server_password: "4Sf19u$e6"
+  server_input_path: "ascent/input/"
+  server_output_path: "ascent/output/"
+  server_archive_path: "ascent/archive/"
+  ingram_micro_input_file_name: "ingram_input.csv"
+  ingram_micro_output_file_name: "ingram_output.csv"
+  ingram_micro_username: "giri@ascent.co.nz"
+  ingram_micro_password: "#sgCMx*9$k"
   sektor_input_ftp_file_name: "sektor_input.csv"
   sektor_output_file_name: "Sektor_Product_Details.csv"
   anywarenz_input_ftp_file_name: "Anyware Ascent Price List.csv"
   anywarenz_output_file_name: "Anywarenz_Product_Details.csv"
+
   
 production:
   server_domain_name: ""
