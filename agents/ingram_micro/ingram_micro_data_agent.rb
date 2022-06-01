@@ -170,6 +170,7 @@ class IngramMicroDataBuilderAgent
     else
       puts "Data is not captured"
       csv.close
+      # Write a code to send alert email to me and you
     end
   end
   def upload_file_to_ftp
