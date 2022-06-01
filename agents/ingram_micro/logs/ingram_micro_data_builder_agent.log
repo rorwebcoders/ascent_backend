@@ -1,0 +1,4 @@
+# Logfile created on 2022-05-31 21:19:27 -0700 by logger.rb/61378
+I, [2022-05-31T21:19:27.367196 #20267]  INFO -- : Mysql connection established
+E, [2022-05-31T21:19:27.369458 #20267] ERROR -- : Error Occured - Xvfb not found on your system
+E, [2022-05-31T21:19:27.369540 #20267] ERROR -- : ["/Users/udhayakumardhanabalan/.rvm/gems/ruby-2.5.5/gems/headless-2.3.1/lib/headless/cli_util.rb:9:in `ensure_application_exists!'", "/Users/udhayakumardhanabalan/.rvm/gems/ruby-2.5.5/gems/headless-2.3.1/lib/headless.rb:78:in `initialize'", "/Users/udhayakumardhanabalan/.rvm/gems/ruby-2.5.5/gems/headless-2.3.1/lib/headless.rb:141:in `new'", "/Users/udhayakumardhanabalan/.rvm/gems/ruby-2.5.5/gems/headless-2.3.1/lib/headless.rb:141:in `run'", "agents/ingram_micro/ingram_micro_data_agent.rb:79:in `start_processing'", "agents/ingram_micro/ingram_micro_data_agent.rb:239:in `<main>'"]
