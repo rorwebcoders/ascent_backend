@@ -192,7 +192,9 @@ class IngramMicroDataBuilderAgent
         #  for now dont use this backup logicc.....
         ftp.close
         #once we uploaded file, we need to delete them
-        File.delete("#{File.dirname(__FILE__)}/ingram_micro_data/#{file_name}")
+        # Delete the INPUT file form, FTP
+        # Delete the INPUT file form, Local ingram_micro_data
+        File.delete("#{File.dirname(__FILE__)}/ingram_micro_data/#{file_name}") #deleting  output file from local after sending to FTP
         begin
           job_status = JobStatus.find_or_initialize_by(job_name: $site_details['ingram_micro_details']['company_name'])
           job_status.updated_referer = DateTime.now
