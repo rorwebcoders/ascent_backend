@@ -86,7 +86,7 @@ class SektorDataBuilderAgent
           rescue
           end
         end
-
+        Headless.ly do
         @vendor_file="#{File.dirname(__FILE__)}/sektor_data/#{$site_details["sektor_input_ftp_file_name"]}"
         if File.exists?(@vendor_file)
           if(File.size(@vendor_file)>0)
@@ -147,6 +147,7 @@ class SektorDataBuilderAgent
             write_data_to_file()
           end
         end
+      end
       end
     rescue Exception => e
       $logger.error "Error Occured - #{e.message}"

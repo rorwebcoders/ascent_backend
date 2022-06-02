@@ -91,7 +91,7 @@ class IngramMicroDataBuilderAgent
           rescue
           end
         end
-        # Headless.ly do
+        Headless.ly do
         @vendor_file="#{File.dirname(__FILE__)}/ingram_micro_data/#{$site_details["ingram_micro_input_file_name"]}"
         if File.exists?(@vendor_file)
           if(File.size(@vendor_file)>0)
@@ -137,7 +137,7 @@ class IngramMicroDataBuilderAgent
                 end
               end
             end
-            # end #headless end
+            end #headless end
             write_data_to_file()
           end
         end
