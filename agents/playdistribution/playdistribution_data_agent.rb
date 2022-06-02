@@ -107,7 +107,7 @@ class PlaydistributionDataBuilderAgent
         temp_1 = doc1.css("a.button_dark")
         temp_1.each do |t_1|
           @i = 1
-          num = 2
+          num = 10
           while @i < num
             puts url = "https://www.playdistribution.com"+t_1["href"]+"page/#{@i}/"
             begin
