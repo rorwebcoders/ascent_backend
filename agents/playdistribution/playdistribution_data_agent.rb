@@ -80,7 +80,7 @@ class PlaydistributionDataBuilderAgent
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
               $logger.info " Files Started Transfer from server to folder"
-              ftp.getbinaryfile("#{$site_details['server_input_path']+$site_details['playdistribution_input_file_name']}", "#{Rails.root}/agents/playdistribution/playdistribution_data/#{$site_details["playdistribution_input_ftp_file_name"]}",1024)
+              ftp.getbinaryfile("#{$site_details['server_input_path']+$site_details['playdistribution_input_file_name']}", "#{Rails.root}/agents/playdistribution/playdistribution_data/#{$site_details["playdistribution_input_file_name"]}",1024)
               $logger.info "Files ended Transfer"
               puts "Files ended Transfer"
               $logger.info "Files Deleted in server"
