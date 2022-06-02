@@ -83,7 +83,9 @@ class SektorDataBuilderAgent
               puts files
               ftp.close
             end
-          rescue
+          rescue Exception => e
+            $logger.error "Error Occured in FTP connection- #{e.message}"
+            $logger.error e.backtrace
           end
         end
         Headless.ly do
