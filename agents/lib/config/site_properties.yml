@@ -16,9 +16,14 @@ development:
   ingram_micro_password: "#sgCMx*9$k"
   sektor_input_ftp_file_name: "sektor_input.csv"
   sektor_output_file_name: "sektor_output.csv"
+  anywarenz_details: {"company_name" : "Anywarenz"}
+  ingram_micro_details: {"company_name" : "Ingram-micro"}
+  playdistribution_details: {"company_name" : "Playdistribution"}
+  sektor_details: {"company_name" : "Sektor"}
   anywarenz_input_file_name: "anywarenz_input.csv"
   anywarenz_output_file_name: "anywarenz_output.csv"
   email_to: ["sudharshana.b@rorwebcoders.com"]
+  email_from: "itctenders8@gmail.com"
   playdistribution_input_file_name: "playdistribution_input.csv"
   playdistribution_output_file_name: "playdistribution_output.csv"
 
@@ -37,8 +42,11 @@ production:
   ingram_micro_password: "#sgCMx*9$k"
   sektor_input_ftp_file_name: "sektor_input.csv"
   sektor_output_file_name: "sektor_output.csv"
+  anywarenz_details: {"company_name" : "Anywarenz"}
+  ingram_micro_details: {"company_name" : "Ingram-micro"}
   anywarenz_input_file_name: "anywarenz_input.csv"
   anywarenz_output_file_name: "anywarenz_output.csv"
   email_to: ["sudharshana.b@rorwebcoders.com", "ukumar@rorwebcoders.com"]
+  email_from: "itctenders8@gmail.com"
   playdistribution_input_file_name: "playdistribution_input.csv"
   playdistribution_output_file_name: "playdistribution_output.csv"

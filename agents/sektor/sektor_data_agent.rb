@@ -17,16 +17,25 @@ ActionMailer::Base.view_paths= File.dirname(__FILE__)
 
 class SektorMailer < ActionMailer::Base
 
-  def alert_data_email(q,e,n,p)
-    puts "Sending Alert Email for #{p} email.."
-    $logger.info "Sending Alert Email for #{p} email.."
-    @q = q
-    @n = n
-    @p = p
+  def alert_data_email
+    puts "Sending Alert Email.."
+    $logger.info "Sending Alert Email.."
     mail(
-      :to      => [e],
-      :from    => "",
-      :subject => "Alert - #{p} has the quantity of #{q}"
+      :to      => $site_details['email_to'],
+      :from    => "itctenders8@gmail.com",
+      :subject => "Alert - Error in Ascent - Sektor file."
+    ) do |format|
+      format.html
+    end
+  end
+
+  def no_data_alert_mail
+    puts "Sending Alert Email.."
+    $logger.info "Sending Alert Email.."
+    mail(
+      :to      => $site_details['email_to'],
+      :from    => $site_details['email_from'],
+      :subject => "Alert - Error Occured in Ascent - Sektor script."
     ) do |format|
       format.html
     end
@@ -85,11 +94,11 @@ class SektorDataBuilderAgent
             browser.window.maximize
             workbook = Roo::CSV.new(@vendor_file, csv_options: {encoding: 'iso-8859-1:utf-8'})
             workbook.default_sheet = workbook.sheets.first
-
-            ((workbook.first_row)..workbook.last_row).each do |row|
+            ((workbook.first_row + 1)..workbook.last_row).each do |row|
               begin
                 l = workbook.row(row)[0].gsub(".","-").gsub("#","-").gsub("_","-")
-                puts url = "https://www.sektor.co.nz/Product/#{l}?criteria=#{l}"
+                $logger.info "Processing #{l}"
+                url = "https://www.sektor.co.nz/Product/#{l}?criteria=#{l}"
                 if(File.exist?("html/#{l}.html"))
                   file = File.read("html/#{l}.html")
                   doc = Nokogiri::HTML(file.to_s)
@@ -97,38 +106,34 @@ class SektorDataBuilderAgent
                   browser.goto "#{url}"
                   sleep 2
                   doc = Nokogiri::HTML.parse(browser.html)
-                  puts ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
+                  ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
                   if ref_id == ""
                     sleep 10
                     doc = Nokogiri::HTML.parse(browser.html)
                   end
                 end
-                puts brand = doc.css("div.brand").text.strip() rescue ""
-                puts title = doc.css("div.column.small-10 h1").text.strip() rescue ""
-                puts ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
+                brand = doc.css("div.brand").text.strip() rescue ""
+                title = doc.css("div.column.small-10 h1").text.strip() rescue ""
+                ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
                   specs_html =  doc.css("section#specs").to_s rescue ""
                   specs =  doc.css("section#specs").text.strip rescue ""
                   description_html = doc.css("section#description") rescue ""
                   description = doc.css("section#description").text rescue ""
                   short_description = doc.css("div.short-description").text rescue ""
-                puts  image = "https://www.sektor.co.nz"+doc.css("img#mainProductImage").attr("src") rescue ""
+                image = "https://www.sektor.co.nz"+doc.css("img#mainProductImage").attr("src") rescue ""
                 if doc.css("div.codes").to_s.include?("Stock code:")
-                  puts stock_code = doc.css("div.codes").to_s.split("Stock code:").last.split("</div>").first.strip()
+                  stock_code = doc.css("div.codes").to_s.split("Stock code:").last.split("</div>").first.strip()
                 end
                 if doc.css("div.codes").to_s.include?("Vendor code:")
-                  puts vendor_code = doc.css("div.codes").to_s.split("Vendor code:").last.split("</div>").first.strip()
+                  vendor_code = doc.css("div.codes").to_s.split("Vendor code:").last.split("</div>").first.strip()
                 end
-
                 temp_2  = doc.css("ul.doclinks li")
-
                 pdfs = []
                 temp_2.each do |t_2|
                   pdfs << "https://www.sektor.co.nz"+t_2.css("a")[0]["href"]
                 end
-                puts pdfs = pdfs.join(", ")
-
-
-                puts  video  = doc.css("section#video iframe").attr("src") rescue ""
+                pdfs = pdfs.join(", ")
+                video  = doc.css("section#video iframe").attr("src") rescue ""
                 exist_data = SektorDetail.where(:url => url)
                 if exist_data.count == 0
                   SektorDetail.create(:url => url, :ref_id => ref_id, :stock_code => stock_code, :vendor_code => vendor_code, :brand => brand, :title => title, :short_description => short_description, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => image, :pdfs => pdfs, :video => video)
@@ -147,6 +152,8 @@ class SektorDataBuilderAgent
       $logger.error "Error Occured - #{e.message}"
       $logger.error e.backtrace
       sleep 10
+      send_email= SektorMailer.no_data_alert_mail()
+      send_email.deliver
     ensure
       $logger.close
       #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
@@ -157,7 +164,6 @@ class SektorDataBuilderAgent
   def write_data_to_file
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/sektor_data") unless File.directory?("#{File.dirname(__FILE__)}/sektor_data")
-    # time = DateTime.now.getutc.strftime("%d_%m_%Y_%H_%M_%S") rescue ""
     file_name = "#{$site_details["sektor_output_file_name"]}"
     csv = CSV.open(Rails.root.join("#{File.dirname(__FILE__)}", 'sektor_data/',file_name), "wb")
     csv << ["Detail URL","Reference ID","stock_code","vendor_code","brand","title","short_description","specs_html","specs","description_html","description","image","pdfs","videos"]
@@ -166,7 +172,6 @@ class SektorDataBuilderAgent
     if allprods.length > 0
       allprods.each_with_index do |p_id,counter_row|
         begin
-          
           url = p_id['url']
           ref_id = p_id['ref_id']
           stock_code = p_id['stock_code']
@@ -212,8 +217,7 @@ class SektorDataBuilderAgent
         ftp.close
         # Delete the INPUT file form, Local sektor_data
         File.delete("#{Rails.root}/agents/sektor/sektor_data/#{$site_details['sektor_input_file_name']}") rescue ""
-        File.delete("#{Rails.root}/agents/sektor/sektor_data/#{file_name}") rescue "" #deleting  output file from local after sending to FTP
-        File.delete("#{File.dirname(__FILE__)}/sektor_data/#{file_name}")
+        File.delete("#{Rails.root}/agents/sektor/sektor_data/#{file_name}") rescue "" #deleting  output 
         begin
           job_status = JobStatus.find_or_initialize_by(job_name: $site_details['sektor_details']['company_name'])
           job_status.updated_referer = DateTime.now
@@ -222,7 +226,6 @@ class SektorDataBuilderAgent
           $logger.error "Error Occured in job status #{e.message}"
           $logger.error e.backtrace
         end
-        
       end
     rescue Exception => e
       $logger.error "Error Occured in file upload #{e.message}"

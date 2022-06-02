@@ -16,17 +16,13 @@ ActionMailer::Base.smtp_settings = {
 ActionMailer::Base.view_paths= File.dirname(__FILE__)
 
 class AnywarenzMailer < ActionMailer::Base
-
   def alert_data_email
     puts "Sending Alert Email.."
     $logger.info "Sending Alert Email.."
-    # @q = q
-    # @n = n
-    # @p = p
     mail(
       :to      => $site_details['email_to'],
-      :from    => "itctenders8@gmail.com",
-      :subject => "Alert - File does not have data"
+      :from    => $site_details['email_from'],
+      :subject => "Alert - Error in Anywarenz - Ascent file."
     ) do |format|
       format.html
     end
@@ -40,8 +36,8 @@ class AnywarenzMailer < ActionMailer::Base
     # @p = p
     mail(
       :to      => $site_details['email_to'],
-      :from    => "itctenders8@gmail.com",
-      :subject => "Alert - File does not have data"
+      :from    => $site_details['email_from'],
+      :subject => "Alert - Error Occured in Ingram - Ascent script."
     ) do |format|
       format.html
     end
@@ -98,37 +94,35 @@ class AnywarenzDataBuilderAgent
           if(File.size(@vendor_file)>0)
             workbook = Roo::CSV.new(@vendor_file, csv_options: {encoding: 'iso-8859-1:utf-8'})
             workbook.default_sheet = workbook.sheets.first
-
             ((workbook.first_row + 1)..workbook.last_row).each do |row|
               begin
                 product_code = workbook.row(row)[0]
-                puts url = "https://www.anywarenz.co.nz/products/#{product_code}"
-                doc = Nokogiri::HTML(open(url))
-                puts title = doc.css("h1.product-meta__title.heading.h1").text.strip() rescue ""
-                puts sku = doc.css("span.product-meta__sku-number").text.strip() rescue ""
-                puts brand = doc.css("a.product-meta__vendor.link.link--accented")[0].text.strip() rescue ""
+                if product_code.strip.to_s != ''
+                  url = "https://www.anywarenz.co.nz/products/#{product_code}"
+                  doc = Nokogiri::HTML(open(url))
+                  title = doc.css("h1.product-meta__title.heading.h1").text.strip() rescue ""
+                  $logger.info "Processing #{title}"
+                  sku = doc.css("span.product-meta__sku-number").text.strip() rescue ""
+                  brand = doc.css("a.product-meta__vendor.link.link--accented")[0].text.strip() rescue ""
                   description = doc.css("div.rte.text--pull")[0].text.strip() rescue ""
                   description_html = doc.css("div.rte.text--pull").to_s.strip() rescue ""
                   temp_image = []
-
-                 temp_1 = doc.css("div.product-gallery__thumbnail-list a")
-
-                temp_1.each do |t_1|
-                   temp_image << t_1["href"].gsub("_1024x","_500x").gsub("//cdn","http://cdn") rescue ""
-                end
-
-                puts temp_image = temp_image.join(", ")
-                if(sku !=  "" && product_code.to_s == sku.to_s)
-                  exist_data = AnywarenzDetail.where(:url => url)
-                  if exist_data.count == 0
-                    AnywarenzDetail.create(:product_code => product_code, :url => url, :sku => sku, :brand => brand, :title => title, :description_html => description_html, :description => description, :temp_image => temp_image)
+                  temp_1 = doc.css("div.product-gallery__thumbnail-list a")
+                  temp_1.each do |t_1|
+                     temp_image << t_1["href"].gsub("_1024x","_500x").gsub("//cdn","http://cdn") rescue ""
+                  end
+                  temp_image = temp_image.join(", ")
+                  if(sku !=  "" && product_code.to_s == sku.to_s)
+                    exist_data = AnywarenzDetail.where(:url => url)
+                    if exist_data.count == 0
+                      AnywarenzDetail.create(:product_code => product_code, :url => url, :sku => sku, :brand => brand, :title => title, :description_html => description_html, :description => description, :temp_image => temp_image)
+                    end
                   end
                 end
               rescue Exception => e
                 $logger.error "Error Occured in #{url} - #{e.message}"
                 $logger.error e.backtrace
               end
-              
             end
             write_data_to_file()
           end
@@ -138,6 +132,8 @@ class AnywarenzDataBuilderAgent
       $logger.error "Error Occured - #{e.message}"
       $logger.error e.backtrace
       sleep 10
+      send_email= AnywarenzMailer.no_data_alert_mail()
+      send_email.deliver
     ensure
       $logger.close
       #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
@@ -148,7 +144,6 @@ class AnywarenzDataBuilderAgent
   def write_data_to_file
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/anywarenz_data") unless File.directory?("#{File.dirname(__FILE__)}/anywarenz_data")
-    # time = DateTime.now.getutc.strftime("%d_%m_%Y_%H_%M_%S") rescue ""
     file_name = "#{$site_details["anywarenz_output_file_name"]}"
     csv = CSV.open(Rails.root.join("#{File.dirname(__FILE__)}", 'anywarenz_data/',file_name), "wb")
     csv << ["ref","Detail URL","Sku","brand","title","description_html","description","image"]
@@ -188,7 +183,6 @@ class AnywarenzDataBuilderAgent
         localfile = "#{File.dirname(__FILE__)}/anywarenz_data/#{file_name}"
         remotefile = $site_details['server_output_path']+file_name
         ftp.putbinaryfile(localfile, remotefile, 1024)
-
         $logger.info "Local Files Transfer"
         files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"

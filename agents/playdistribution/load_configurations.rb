@@ -20,5 +20,6 @@ ActiveRecord::Base.default_timezone = :utc
 require File.expand_path('../../lib/config/database_connection', __FILE__)
 puts require File.expand_path('../../../config/application', __FILE__)
 require File.expand_path('../../lib/models/playdistribution_detail', __FILE__)
+require File.expand_path('../../lib/models/job_status', __FILE__)
 #~ puts require File.expand_path('../../../config/boot', __FILE__)
 #~ require File.expand_path('../../lib/config/*

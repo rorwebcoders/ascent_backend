@@ -25,8 +25,8 @@ class IngramMicroMailer < ActionMailer::Base
     # @p = p
     mail(
       :to      => $site_details['email_to'],
-      :from    => "itctenders8@gmail.com",
-      :subject => "Alert - File does not have data"
+      :from    => $site_details['email_from'],
+      :subject => "Alert - Error in Ingram - Ascent file."
     ) do |format|
       format.html
     end
@@ -40,8 +40,8 @@ class IngramMicroMailer < ActionMailer::Base
     # @p = p
     mail(
       :to      => $site_details['email_to'],
-      :from    => "itctenders8@gmail.com",
-      :subject => "Alert - File does not have data"
+      :from    => $site_details['email_from'],
+      :subject => "Alert - Error Occured in Ingram - Ascent script."
     ) do |format|
       format.html
     end
@@ -92,7 +92,7 @@ class IngramMicroDataBuilderAgent
           end
         end
         # Headless.ly do
-        puts @vendor_file="#{File.dirname(__FILE__)}/ingram_micro_data/#{$site_details["ingram_micro_input_file_name"]}"
+        @vendor_file="#{File.dirname(__FILE__)}/ingram_micro_data/#{$site_details["ingram_micro_input_file_name"]}"
         if File.exists?(@vendor_file)
           if(File.size(@vendor_file)>0)
             browser = Watir::Browser.new :firefox
@@ -106,6 +106,7 @@ class IngramMicroDataBuilderAgent
             csv_string = handler.read.encode!("UTF-8", invalid: :replace).gsub("\r","")
             CSV.parse(csv_string, :headers => :first_row, liberal_parsing: true, col_sep: "|").each_with_index do |line,index|
               product_code = line[0]
+              $logger.info "Processing #{product_code}"
               url = "https://nz.ingrammicro.com/site/productdetail?id=#{product_code}"
               exist_data = IngramMicroDetail.where(:url => url)
               if exist_data.count == 0
@@ -114,7 +115,7 @@ class IngramMicroDataBuilderAgent
                   sleep 2
                   doc = Nokogiri::HTML.parse(browser.html)
                   title = doc.css("div.clsProductFullDesc").text.gsub("Less","").strip() rescue ""
-                  puts vendor_code = doc.css("div.Top-Sku-VPN-UPC").text.split("VPN:").last.strip().split("SKU:").first.strip() rescue ""
+                  vendor_code = doc.css("div.Top-Sku-VPN-UPC").text.split("VPN:").last.strip().split("SKU:").first.strip() rescue ""
                   description = doc.css("div#collapseZero").text.strip rescue ""
                   description_html = doc.css("div#collapseZero").to_s rescue ""
                   specs = doc.css("div#collapseOne").text rescue ""
@@ -124,7 +125,7 @@ class IngramMicroDataBuilderAgent
                   temp_1.each do |t_1|
                     temp_image << t_1.attr("src").gsub("/300/","/500/") rescue ""
                   end
-                  puts temp_image = temp_image.uniq.join(", ")
+                  temp_image = temp_image.uniq.join(", ")
                   IngramMicroDetail.create(:url => url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
                   $logger.info "Inserted #{product_code}"
                 rescue
@@ -138,9 +139,6 @@ class IngramMicroDataBuilderAgent
             end
             # end #headless end
             write_data_to_file()
-          else
-            # send_email= IngramMicroMailer.no_data_alert_mail()
-            # send_email.deliver
           end
         end
       end
@@ -148,7 +146,8 @@ class IngramMicroDataBuilderAgent
       $logger.error "Error Occured - #{e.message}"
       $logger.error e.backtrace
       sleep 10
-      # Write a code to send alert email to me and you
+      send_email= IngramMicroMailer.no_data_alert_mail()
+      send_email.deliver
     ensure
       $logger.close
       #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
@@ -159,7 +158,6 @@ class IngramMicroDataBuilderAgent
   def write_data_to_file
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/ingram_micro_data") unless File.directory?("#{File.dirname(__FILE__)}/ingram_micro_data")
-    # time = DateTime.now.getutc.strftime("%d_%m_%Y_%H_%M_%S") rescue ""
     file_name = "#{$site_details["ingram_micro_output_file_name"]}"
     csv = CSV.open(Rails.root.join("#{File.dirname(__FILE__)}", 'ingram_micro_data/',file_name), "wb")
     csv << ["ref","Detail URL","vendor_code","title","description_html","description","specs_html","specs","image"]
@@ -209,10 +207,8 @@ class IngramMicroDataBuilderAgent
         # ftp.rename($site_details['server_input_path']+$site_details['ingram_micro_input_file_name'], $site_details['server_archive_path']+$site_details['ingram_micro_input_file_name'].gsub(".csv","_#{Date.today.to_s}_#{Time.now.to_i}.csv"))
         # ftp.rename($site_details['server_output_path']+$site_details['ingram_micro_output_file_name'], $site_details['server_archive_path']+$site_details['ingram_micro_output_file_name'].gsub(".csv","_#{Date.today.to_s}_#{Time.now.to_i}.csv"))
         #  for now dont use this backup logicc.....
-        
         #once we uploaded file, we need to delete them
         # Delete the INPUT file form, FTP
-        # byebug
         ftp.delete("#{File.dirname(__FILE__)}/#{$site_details['server_input_path']+$site_details['ingram_micro_input_file_name']}") rescue ""
         ftp.close
         # Delete the INPUT file form, Local ingram_micro_data

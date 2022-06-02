@@ -1,0 +1,35 @@
+<style>
+table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+td{
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+}
+th {
+    border: 2px solid #dddddd;
+    text-align: left;
+    padding: 10px;
+    background-color: #EBEDEF;
+    color: black;
+}
+</style>
+<div style="padding:20px">
+<%if !@jobs.nil?%>
+<table style="">
+<tr>
+   <th style="">Job Name</th>
+   <th style="">Last Updated</th>
+   <th style="">Time Differences</th>
+ </tr>
+<%@jobs.each do |job|%>
+<!--<tr style="background-color:white">-->
+<tr style="background-color:<%=getTimeDifferenceColor(job)%>">
+<td style=""><%=job.job_name%></td><td style=""><%=job.updated_referer%></td><td><%=TimeDifference.between(Time.parse(job.updated_referer.to_s),Time.parse(DateTime.now.to_s)).humanize%></td>
+</tr>
+<%end%>
+<%end%>
+</div>

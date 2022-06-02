@@ -26,7 +26,7 @@ class PlaydistributionMailer < ActionMailer::Base
     mail(
       :to      => $site_details['email_to'],
       :from    => "itctenders8@gmail.com",
-      :subject => "Alert - File does not have data"
+      :subject => "Alert - Error in Ascent - PlayDistribution file."
     ) do |format|
       format.html
     end
@@ -40,8 +40,8 @@ class PlaydistributionMailer < ActionMailer::Base
     # @p = p
     mail(
       :to      => $site_details['email_to'],
-      :from    => "itctenders8@gmail.com",
-      :subject => "Alert - File does not have data"
+      :from    => $site_details['email_from'],
+      :subject => "Alert - Error Occured in Ascent - PlayDistribution script."
     ) do |format|
       format.html
     end
@@ -95,7 +95,6 @@ class PlaydistributionDataBuilderAgent
 
         @vendor_file = open("#{File.dirname(__FILE__)}/playdistribution_data/#{$site_details["playdistribution_input_file_name"]}",{:ssl_verify_mode => OpenSSL::SSL::VERIFY_NONE})
         @csv_string= @vendor_file.read.encode!("UTF-8", "iso-8859-1", invalid: :replace)
-
         @p_code = []
         CSV.parse(@csv_string, :headers => true, liberal_parsing: true).each_with_index do |r,i|
           @p_code << r[0]
@@ -104,10 +103,8 @@ class PlaydistributionDataBuilderAgent
         doc1 = Nokogiri::HTML(open(brand_url))
         temp_1 = doc1.css("a.button_dark")
         temp_1.each do |t_1|
-
           @i = 1
           num = 2
-
           while @i < num
             puts url = "https://www.playdistribution.com"+t_1["href"]+"page/#{@i}/"
             begin
@@ -163,6 +160,8 @@ class PlaydistributionDataBuilderAgent
       $logger.error "Error Occured - #{e.message}"
       $logger.error e.backtrace
       sleep 10
+      send_email= PlaydistributionMailer.no_data_alert_mail()
+      send_email.deliver
     ensure
       $logger.close
       #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
@@ -194,7 +193,7 @@ class PlaydistributionDataBuilderAgent
       end
       csv.close
       $logger.info "-xlsx--created locally--"
-      # upload_file_to_ftp(file_name)
+      upload_file_to_ftp
     else
       puts "Data is not captured"
       csv.close
