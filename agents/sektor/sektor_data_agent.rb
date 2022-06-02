@@ -59,21 +59,24 @@ class SektorDataBuilderAgent
     begin
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/sektor_data") unless File.directory?("#{File.dirname(__FILE__)}/sektor_data")
-        # begin
-        #   Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
-        #     ftp.passive = true
-        #     $logger.info " Files Started Transfer from server to folder"
-        #     ftp.getbinaryfile("#{$site_details["sektor_input_ftp_file_name"]}", "#{Rails.root}/agents/sektor/sektor_data/#{$site_details["sektor_input_ftp_file_name"]}",1024)
-        #     $logger.info "Files ended Transfer"
-        #     puts "Files ended Transfer"
-        #     $logger.info "Files Deleted in server"
-        #     puts "Files Deleted in server"
-        #     files = ftp.list
-        #     puts files
-        #     ftp.close
-        #   end
-        # rescue
-        # end
+        if Rails.env != "development"
+          SektorProductDetail.destroy_all rescue ""
+          begin
+            Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
+              ftp.passive = true
+              $logger.info " Files Started Transfer from server to folder"
+              ftp.getbinaryfile("#{$site_details["sektor_input_ftp_file_name"]}", "#{Rails.root}/agents/sektor/sektor_data/#{$site_details["sektor_input_ftp_file_name"]}",1024)
+              $logger.info "Files ended Transfer"
+              puts "Files ended Transfer"
+              $logger.info "Files Deleted in server"
+              puts "Files Deleted in server"
+              files = ftp.list
+              puts files
+              ftp.close
+            end
+          rescue
+          end
+        end
 
         @vendor_file="#{File.dirname(__FILE__)}/sektor_data/#{$site_details["sektor_input_ftp_file_name"]}"
         if File.exists?(@vendor_file)
@@ -84,52 +87,57 @@ class SektorDataBuilderAgent
             workbook.default_sheet = workbook.sheets.first
 
             ((workbook.first_row)..workbook.last_row).each do |row|
-              # byebug
-              l = workbook.row(row)[0].gsub(".","-").gsub("#","-").gsub("_","-")
-              puts url = "https://www.sektor.co.nz/Product/#{l}?criteria=#{l}"
-              if(File.exist?("html/#{l}.html"))
-                file = File.read("html/#{l}.html")
-                doc = Nokogiri::HTML(file.to_s)
-              else
-                browser.goto "#{url}"
-                sleep 2
-                doc = Nokogiri::HTML.parse(browser.html)
-                puts ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
-                if ref_id == ""
-                  sleep 10
+              begin
+                l = workbook.row(row)[0].gsub(".","-").gsub("#","-").gsub("_","-")
+                puts url = "https://www.sektor.co.nz/Product/#{l}?criteria=#{l}"
+                if(File.exist?("html/#{l}.html"))
+                  file = File.read("html/#{l}.html")
+                  doc = Nokogiri::HTML(file.to_s)
+                else
+                  browser.goto "#{url}"
+                  sleep 2
                   doc = Nokogiri::HTML.parse(browser.html)
+                  puts ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
+                  if ref_id == ""
+                    sleep 10
+                    doc = Nokogiri::HTML.parse(browser.html)
+                  end
                 end
-              end
-              puts brand = doc.css("div.brand").text.strip() rescue ""
-              puts title = doc.css("div.column.small-10 h1").text.strip() rescue ""
-              puts ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
-                specs_html =  doc.css("section#specs").to_s rescue ""
-                specs =  doc.css("section#specs").text.strip rescue ""
-                description_html = doc.css("section#description") rescue ""
-                description = doc.css("section#description").text rescue ""
-                short_description = doc.css("div.short-description").text rescue ""
-              puts  image = "https://www.sektor.co.nz"+doc.css("img#mainProductImage").attr("src") rescue ""
-              if doc.css("div.codes").to_s.include?("Stock code:")
-                puts stock_code = doc.css("div.codes").to_s.split("Stock code:").last.split("</div>").first.strip()
-              end
-              if doc.css("div.codes").to_s.include?("Vendor code:")
-                puts vendor_code = doc.css("div.codes").to_s.split("Vendor code:").last.split("</div>").first.strip()
-              end
+                puts brand = doc.css("div.brand").text.strip() rescue ""
+                puts title = doc.css("div.column.small-10 h1").text.strip() rescue ""
+                puts ref_id  = doc.css("div.product-brand").attr("id").to_s.split("brand_").last rescue ""
+                  specs_html =  doc.css("section#specs").to_s rescue ""
+                  specs =  doc.css("section#specs").text.strip rescue ""
+                  description_html = doc.css("section#description") rescue ""
+                  description = doc.css("section#description").text rescue ""
+                  short_description = doc.css("div.short-description").text rescue ""
+                puts  image = "https://www.sektor.co.nz"+doc.css("img#mainProductImage").attr("src") rescue ""
+                if doc.css("div.codes").to_s.include?("Stock code:")
+                  puts stock_code = doc.css("div.codes").to_s.split("Stock code:").last.split("</div>").first.strip()
+                end
+                if doc.css("div.codes").to_s.include?("Vendor code:")
+                  puts vendor_code = doc.css("div.codes").to_s.split("Vendor code:").last.split("</div>").first.strip()
+                end
 
-              temp_2  = doc.css("ul.doclinks li")
+                temp_2  = doc.css("ul.doclinks li")
 
-              pdfs = []
-              temp_2.each do |t_2|
-                pdfs << "https://www.sektor.co.nz"+t_2.css("a")[0]["href"]
+                pdfs = []
+                temp_2.each do |t_2|
+                  pdfs << "https://www.sektor.co.nz"+t_2.css("a")[0]["href"]
+                end
+                puts pdfs = pdfs.join(", ")
+
+
+                puts  video  = doc.css("section#video iframe").attr("src") rescue ""
+                exist_data = SektorDetail.where(:url => url)
+                if exist_data.count == 0
+                  SektorDetail.create(:url => url, :ref_id => ref_id, :stock_code => stock_code, :vendor_code => vendor_code, :brand => brand, :title => title, :short_description => short_description, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => image, :pdfs => pdfs, :video => video)
+                end
+              rescue Exception => e
+                $logger.error "Error Occured in #{url} - #{e.message}"
+                $logger.error e.backtrace
               end
-              puts pdfs = pdfs.join(", ")
-
-
-              puts  video  = doc.css("section#video iframe").attr("src") rescue ""
-              exist_data = SektorDetail.where(:url => url)
-              if exist_data.count == 0
-                SektorDetail.create(:url => url, :ref_id => ref_id, :stock_code => stock_code, :vendor_code => vendor_code, :brand => brand, :title => title, :short_description => short_description, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => image, :pdfs => pdfs, :video => video)
-              end
+              
             end
             write_data_to_file()
           end
@@ -179,37 +187,46 @@ class SektorDataBuilderAgent
       end
       csv.close
       $logger.info "-xlsx--created locally--"
-      # upload_file_to_ftp(file_name)
+      upload_file_to_ftp
     else
       puts "Data is not captured"
       csv.close
+      send_email= SektorMailer.alert_data_email()
+      send_email.deliver
     end
   end
-  def upload_file_to_ftp(file_name)
+  def upload_file_to_ftp
     #upload file to ftp
     begin
-      Net::FTP.open($site_details['ftp_details']['ftp_domain'], $site_details['ftp_details']['ftp_username'], $site_details['ftp_details']['ftp_password']) do |ftp|
+      file_name = "#{$site_details["sektor_output_file_name"]}"
+      Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
+        file_name = $site_details['sektor_output_file_name']
         localfile = "#{File.dirname(__FILE__)}/sektor_data/#{file_name}"
-        remotefile = "#{$site_details['ftp_details']['ftp_folder_path']}/#{file_name}"
+        remotefile = $site_details['server_output_path']+file_name
         ftp.putbinaryfile(localfile, remotefile, 1024)
         $logger.info "Local Files Transfer"
-        puts files = ftp.list
+        files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"
+        ftp.delete("#{File.dirname(__FILE__)}/#{$site_details['server_input_path']+$site_details['sektor_input_file_name']}") rescue ""
         ftp.close
-        #once we uploaded file, we need to delete them
+        # Delete the INPUT file form, Local sektor_data
+        File.delete("#{Rails.root}/agents/sektor/sektor_data/#{$site_details['sektor_input_file_name']}") rescue ""
+        File.delete("#{Rails.root}/agents/sektor/sektor_data/#{file_name}") rescue "" #deleting  output file from local after sending to FTP
         File.delete("#{File.dirname(__FILE__)}/sektor_data/#{file_name}")
         begin
-          koalo_job = JobStatus.find_or_initialize_by(job_name: $site_details['sektor_details']['company_name'])
-          koalo_job.updated_referer = DateTime.now
-          koalo_job.save
+          job_status = JobStatus.find_or_initialize_by(job_name: $site_details['sektor_details']['company_name'])
+          job_status.updated_referer = DateTime.now
+          job_status.save
         rescue Exception => e
           $logger.error "Error Occured in job status #{e.message}"
           $logger.error e.backtrace
         end
-        SektorProductDetail.destroy_all rescue ""
+        
       end
-    rescue
+    rescue Exception => e
+      $logger.error "Error Occured in file upload #{e.message}"
+      $logger.error e.backtrace
     end
   end
 end #class

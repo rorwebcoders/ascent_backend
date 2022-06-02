@@ -1,0 +1,2 @@
+class PlaydistributionDetail < ApplicationRecord
+end

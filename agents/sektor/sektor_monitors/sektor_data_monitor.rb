@@ -14,7 +14,7 @@ if pid_status_english
 else
   $logger.info ("Process started....")
   #~ system("nohup bundle exec /usr/bin/ruby ../sektor_data_agent.rb &")
-  system("nohup bundle exec ruby /var/www/ascent_backend/current/agents/sektor/sektor_data_agent.rb -e production &")
+  system("nohup bundle exec ruby /var/www/AscentApp/current/agents/sektor/sektor_data_agent.rb -e production &")
 end
 #~ sleep 300
 #~ end
