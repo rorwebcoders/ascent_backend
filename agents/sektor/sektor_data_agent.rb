@@ -68,7 +68,7 @@ class SektorDataBuilderAgent
     begin
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/sektor_data") unless File.directory?("#{File.dirname(__FILE__)}/sektor_data")
-        if Rails.env != "development"
+        if @options[:env] != "development"
           SektorProductDetail.destroy_all rescue ""
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
