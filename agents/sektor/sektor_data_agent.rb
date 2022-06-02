@@ -90,6 +90,7 @@ class SektorDataBuilderAgent
         @vendor_file="#{File.dirname(__FILE__)}/sektor_data/#{$site_details["sektor_input_ftp_file_name"]}"
         if File.exists?(@vendor_file)
           if(File.size(@vendor_file)>0)
+            Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
             browser = Watir::Browser.new :firefox
             browser.window.maximize
             workbook = Roo::CSV.new(@vendor_file, csv_options: {encoding: 'iso-8859-1:utf-8'})
