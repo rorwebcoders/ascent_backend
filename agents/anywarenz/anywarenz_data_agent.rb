@@ -31,13 +31,10 @@ class AnywarenzMailer < ActionMailer::Base
   def no_data_alert_mail
     puts "Sending Alert Email.."
     $logger.info "Sending Alert Email.."
-    # @q = q
-    # @n = n
-    # @p = p
     mail(
       :to      => $site_details['email_to'],
       :from    => $site_details['email_from'],
-      :subject => "Alert - Error Occured in Ingram - Ascent script."
+      :subject => "Alert - Error Occured in Anywarenz - Ascent script."
     ) do |format|
       format.html
     end
@@ -76,13 +73,17 @@ class AnywarenzDataBuilderAgent
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
               $logger.info " Files Started Transfer from server to folder"
-              ftp.getbinaryfile("#{$site_details['server_input_path']+$site_details['anywarenz_input_file_name']}", "#{Rails.root}/agents/anywarenz/anywarenz_data/#{$site_details["anywarenz_input_file_name"]}",1024)
+              ftp.chdir("#{$site_details['server_input_path']}")
+              files = ftp.nlst('*.csv')
+              files.each do |file|
+                puts file
+                if file.to_s.starts_with?($site_details['anywarenz_input_file_name'])
+                  ftp.getbinaryfile(file, "#{Rails.root}/agents/anywarenz/anywarenz_data/"+file,1024)
+                end
+              end
+              sleep 5
               $logger.info "Files ended Transfer"
               puts "Files ended Transfer"
-              $logger.info "Files Deleted in server"
-              puts "Files Deleted in server"
-              files = ftp.list
-              puts files
               ftp.close
             end
           rescue Exception => e
@@ -90,43 +91,58 @@ class AnywarenzDataBuilderAgent
             $logger.error e.backtrace
           end
         end
-
-        @vendor_file="#{File.dirname(__FILE__)}/anywarenz_data/#{$site_details["anywarenz_input_file_name"]}"
-        if File.exists?(@vendor_file)
-          if(File.size(@vendor_file)>0)
-            workbook = Roo::CSV.new(@vendor_file, csv_options: {encoding: 'iso-8859-1:utf-8'})
-            workbook.default_sheet = workbook.sheets.first
-            ((workbook.first_row + 1)..workbook.last_row).each do |row|
-              begin
-                product_code = workbook.row(row)[0]
-                if product_code.strip.to_s != ''
-                  url = "https://www.anywarenz.co.nz/products/#{product_code}"
-                  doc = Nokogiri::HTML(open(url))
-                  title = doc.css("h1.product-meta__title.heading.h1").text.strip() rescue ""
-                  $logger.info "Processing #{title}"
-                  sku = doc.css("span.product-meta__sku-number").text.strip() rescue ""
-                  brand = doc.css("a.product-meta__vendor.link.link--accented")[0].text.strip() rescue ""
-                  description = doc.css("div.rte.text--pull")[0].text.strip() rescue ""
-                  description_html = doc.css("div.rte.text--pull").to_s.strip() rescue ""
-                  temp_image = []
-                  temp_1 = doc.css("div.product-gallery__thumbnail-list a")
-                  temp_1.each do |t_1|
-                     temp_image << t_1["href"].gsub("_1024x","_500x").gsub("//cdn","http://cdn") rescue ""
-                  end
-                  temp_image = temp_image.join(", ")
-                  if(sku !=  "" && product_code.to_s == sku.to_s)
-                    exist_data = AnywarenzDetail.where(:url => url)
-                    if exist_data.count == 0
-                      AnywarenzDetail.create(:product_code => product_code, :url => url, :sku => sku, :brand => brand, :title => title, :description_html => description_html, :description => description, :temp_image => temp_image)
+        all_files =  Dir["#{File.dirname(__FILE__)}/anywarenz_data/**/*.csv"]
+        all_files.each do |input_file_path_and_name|
+          begin
+            if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['anywarenz_input_file_name'])
+              puts input_file_path_and_name
+              if File.exists?(input_file_path_and_name)
+                if(File.size(input_file_path_and_name)>0)
+                  workbook = Roo::CSV.new(input_file_path_and_name, csv_options: {encoding: 'iso-8859-1:utf-8'})
+                  workbook.default_sheet = workbook.sheets.first
+                  ((workbook.first_row + 1)..workbook.last_row).each do |row|
+                    begin
+                      product_code = workbook.row(row)[0]
+                      if product_code.strip.to_s != ''
+                        url = "https://www.anywarenz.co.nz/products/#{product_code}"
+                        doc = Nokogiri::HTML(open(url))
+                        title = doc.css("h1.product-meta__title.heading.h1").text.strip() rescue ""
+                        $logger.info "Processing #{title}"
+                        sku = doc.css("span.product-meta__sku-number").text.strip() rescue ""
+                        brand = doc.css("a.product-meta__vendor.link.link--accented")[0].text.strip() rescue ""
+                        description = doc.css("div.rte.text--pull")[0].text.strip() rescue ""
+                        description_html = doc.css("div.rte.text--pull").to_s.strip() rescue ""
+                        temp_image = []
+                        temp_1 = doc.css("div.product-gallery__thumbnail-list a")
+                        temp_1.each do |t_1|
+                          temp_image << t_1["href"].gsub("_1024x","_500x").gsub("//cdn","http://cdn") rescue ""
+                        end
+                        temp_image = temp_image.join(", ")
+                        if(sku !=  "" && product_code.to_s == sku.to_s)
+                          exist_data = AnywarenzDetail.where(:url => url)
+                          if exist_data.count == 0
+                            AnywarenzDetail.create(:product_code => product_code, :url => url, :sku => sku, :brand => brand, :title => title, :description_html => description_html, :description => description, :temp_image => temp_image)
+                            $logger.info "Inserted #{product_code}"
+                          end
+                        end
+                      end
+                    rescue Exception => e
+                      begin
+                        AnywarenzDetail.create(:product_code => product_code, :url => url)
+                      rescue Exception => e
+                      end
+                      $logger.error "Error Occured in #{url} - #{e.message}"
+                      $logger.error e.backtrace
                     end
                   end
+                  write_data_to_file(input_file_path_and_name)
                 end
-              rescue Exception => e
-                $logger.error "Error Occured in #{url} - #{e.message}"
-                $logger.error e.backtrace
               end
             end
-            write_data_to_file()
+          rescue Exception => e
+            puts  "Some problem in #{input_file_path_and_name} process Please Check"
+            $logger.info  "Some problem in #{input_file_path_and_name} process Please Check - #{e.message}"
+            $logger.info  e.backtrace
           end
         end
       end
@@ -143,11 +159,11 @@ class AnywarenzDataBuilderAgent
     end
   end
 
-  def write_data_to_file
+  def write_data_to_file(input_file_path_and_name)
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/anywarenz_data") unless File.directory?("#{File.dirname(__FILE__)}/anywarenz_data")
-    file_name = "#{$site_details["anywarenz_output_file_name"]}"
-    csv = CSV.open(Rails.root.join("#{File.dirname(__FILE__)}", 'anywarenz_data/',file_name), "wb")
+    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub("_input_","_output_")
+    csv = CSV.open(output_file_path_and_name, "wb")
     csv << ["ref","Detail URL","Sku","brand","title","description_html","description","image"]
     $logger.info "-added headers--"
     allprods = AnywarenzDetail.all
@@ -168,7 +184,7 @@ class AnywarenzDataBuilderAgent
       end
       csv.close
       $logger.info "-xlsx--created locally--"
-      upload_file_to_ftp()
+      upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
       puts "Data is not captured"
       csv.close
@@ -176,26 +192,26 @@ class AnywarenzDataBuilderAgent
       send_email.deliver
     end
   end
-  def upload_file_to_ftp
+  def upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     #upload file to ftp
     begin
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
-        file_name = $site_details['anywarenz_output_file_name']
-        localfile = "#{File.dirname(__FILE__)}/anywarenz_data/#{file_name}"
-        remotefile = $site_details['server_output_path']+file_name
-        ftp.putbinaryfile(localfile, remotefile, 1024)
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        output_filename = output_file_path_and_name.to_s.split("/").last
+        remotefile_output_path = $site_details['server_output_path']+output_filename
+        ftp.putbinaryfile(output_file_path_and_name, remotefile_output_path, 1024)
         $logger.info "Local Files Transfer"
         files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"
-        $site_details['server_input_path']+$site_details['anywarenz_input_file_name']
+        #Moved input and output ftp files to archive  path
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
+        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
+        #Moved input and output ftp files to archive  path
         ftp.close
-        #once we uploaded file, we need to delete them
-        # Delete the INPUT file form, FTP
-        ftp.delete("#{File.dirname(__FILE__)}/#{$site_details['server_input_path']+$site_details['anywarenz_input_file_name']}") rescue ""
         # Delete the INPUT file form, Local anywarenz_data
-        File.delete("#{Rails.root}/agents/anywarenz/anywarenz_data/#{$site_details['anywarenz_input_file_name']}") rescue ""
-        File.delete("#{Rails.root}/agents/anywarenz/anywarenz_data/#{file_name}") rescue "" #deleting  output file from local after sending to FTP
+        File.delete(input_file_path_and_name) rescue ""  #deleting  input file from local after sending to FTP
+        File.delete(output_file_path_and_name) rescue "" #deleting  output file from local after sending to FTP
         begin
           job_status = JobStatus.find_or_initialize_by(job_name: $site_details['anywarenz_details']['company_name'])
           job_status.updated_referer = DateTime.now

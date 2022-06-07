@@ -91,7 +91,6 @@ class IngramMicroDataBuilderAgent
               sleep 5
               $logger.info "Files ended Transfer"
               puts "Files ended Transfer"
-              # puts files
               ftp.close
             end
           rescue Exception => e
@@ -100,14 +99,14 @@ class IngramMicroDataBuilderAgent
           end
         end
 
-        Headless.ly do
+        # Headless.ly do
         all_files =  Dir["#{File.dirname(__FILE__)}/ingram_micro_data/**/*.csv"]
         all_files.each do |input_file_path_and_name|
           begin
             if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['ingram_micro_input_file_name'])
               if File.exists?(input_file_path_and_name)
                 if(File.size(input_file_path_and_name)>0)
-                  Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
+                  # Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
                   browser = Watir::Browser.new :firefox
                   browser.window.maximize
                   browser.goto "https://nz.ingrammicro.com/Site/Login"
@@ -159,7 +158,7 @@ class IngramMicroDataBuilderAgent
             $logger.info  "Some problem in #{input_file_path_and_name} process Please Check"
           end
         end
-        end #headless end
+        # end #headless end
       end
     rescue Exception => e
       $logger.error "Error Occured - #{e.message}"
@@ -210,6 +209,7 @@ class IngramMicroDataBuilderAgent
       send_email.deliver
     end
   end
+  
   def upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     begin
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|

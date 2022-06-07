@@ -25,7 +25,7 @@ class PlaydistributionMailer < ActionMailer::Base
     # @p = p
     mail(
       :to      => $site_details['email_to'],
-      :from    => "itctenders8@gmail.com",
+      :from    => $site_details['email_from'],
       :subject => "Alert - Error in Ascent - PlayDistribution file."
     ) do |format|
       format.html
@@ -35,9 +35,6 @@ class PlaydistributionMailer < ActionMailer::Base
   def no_data_alert_mail
     puts "Sending Alert Email.."
     $logger.info "Sending Alert Email.."
-    # @q = q
-    # @n = n
-    # @p = p
     mail(
       :to      => $site_details['email_to'],
       :from    => $site_details['email_from'],
@@ -80,13 +77,17 @@ class PlaydistributionDataBuilderAgent
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
               $logger.info " Files Started Transfer from server to folder"
-              ftp.getbinaryfile("#{$site_details['server_input_path']+$site_details['playdistribution_input_file_name']}", "#{Rails.root}/agents/playdistribution/playdistribution_data/#{$site_details["playdistribution_input_file_name"]}",1024)
+              ftp.chdir("#{$site_details['server_input_path']}")
+              files = ftp.nlst('*.csv')
+              files.each do |file|
+                puts file
+                if file.to_s.starts_with?($site_details['playdistribution_input_file_name'])
+                  ftp.getbinaryfile(file, "#{Rails.root}/agents/playdistribution/playdistribution_data/"+file,1024)
+                end
+              end
+              sleep 5
               $logger.info "Files ended Transfer"
               puts "Files ended Transfer"
-              $logger.info "Files Deleted in server"
-              puts "Files Deleted in server"
-              files = ftp.list
-              puts files
               ftp.close
             end
           rescue Exception => e
@@ -95,69 +96,78 @@ class PlaydistributionDataBuilderAgent
 
           end
         end
-
-        @vendor_file = open("#{File.dirname(__FILE__)}/playdistribution_data/#{$site_details["playdistribution_input_file_name"]}",{:ssl_verify_mode => OpenSSL::SSL::VERIFY_NONE})
-        @csv_string= @vendor_file.read.encode!("UTF-8", "iso-8859-1", invalid: :replace)
-        @p_code = []
-        CSV.parse(@csv_string, :headers => true, liberal_parsing: true).each_with_index do |r,i|
-          @p_code << r[0]
-        end
-        brand_url = "https://www.playdistribution.com/ourbrands/"
-        doc1 = Nokogiri::HTML(open(brand_url))
-        temp_1 = doc1.css("a.button_dark")
-        temp_1.each do |t_1|
-          @i = 1
-          num = 10
-          while @i < num
-            puts url = "https://www.playdistribution.com"+t_1["href"]+"page/#{@i}/"
-            begin
-              doc2 = Nokogiri::HTML(open(url))
-              temp_2 =  doc2.css("ul.products li.product-type-simple")
-              temp_2.each do |t_2|
-                puts detail_url = t_2.css("a")[0]["href"] rescue ""
-                if detail_url.to_s !=  ""
-                  exist_data = PlaydistributionDetail.where(:url => detail_url)
-                  if exist_data.count == 0
+        all_files =  Dir["#{File.dirname(__FILE__)}/playdistribution_data/**/*.csv"]
+        all_files.each do |input_file_path_and_name|
+          begin
+            if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['playdistribution_input_file_name'])
+            if File.exists?(input_file_path_and_name)
+              if(File.size(input_file_path_and_name)>0)
+                @csv_string= (File.open(input_file_path_and_name)).read.encode!("UTF-8", "iso-8859-1", invalid: :replace)
+                @p_code = []
+                CSV.parse(@csv_string, :headers => true, liberal_parsing: true).each_with_index do |r,i|
+                  @p_code << r[0]
+                end
+                brand_url = "https://www.playdistribution.com/ourbrands/"
+                doc1 = Nokogiri::HTML(open(brand_url))
+                temp_1 = doc1.css("a.button_dark")
+                temp_1.each do |t_1|
+                  @i = 1
+                  num = 10
+                  while @i < num
+                    puts url = "https://www.playdistribution.com"+t_1["href"]+"page/#{@i}/"
                     begin
-                      doc = Nokogiri::HTML(open(detail_url))
-                      temp_3 =  doc.css("div.sections_group")
-                      sku = temp_3.css("span.sku").text  rescue ""
-                      if (sku.to_s != "" &&  @p_code.include?(sku))
-                        puts sku
-                        title = doc.css("h2.title").text.strip() rescue ""
-                        puts  brand = temp_3.css("div#tab-product_brand_tab-content h3").text.strip() rescue ""
-                        description = temp_3.css("div#tab-description").text.strip() rescue ""
-                        description_html = temp_3.css("div#tab-description").to_s.strip() rescue ""
-                        temp_4 = doc.css("div.product_image_wrapper.column.one-second img")
-                        t_im =  []
-                        temp_4.each do |t_4|
-                          t_im << t_4.attr("src") rescue ""
+                      doc2 = Nokogiri::HTML(open(url))
+                      temp_2 =  doc2.css("ul.products li.product-type-simple")
+                      temp_2.each do |t_2|
+                        puts detail_url = t_2.css("a")[0]["href"] rescue ""
+                        if detail_url.to_s !=  ""
+                          exist_data = PlaydistributionDetail.where(:url => detail_url)
+                          if exist_data.count == 0
+                            begin
+                              doc = Nokogiri::HTML(open(detail_url))
+                              temp_3 =  doc.css("div.sections_group")
+                              sku = temp_3.css("span.sku").text  rescue ""
+                              if (sku.to_s != "" &&  @p_code.include?(sku))
+                                puts sku
+                                title = doc.css("h2.title").text.strip() rescue ""
+                                puts  brand = temp_3.css("div#tab-product_brand_tab-content h3").text.strip() rescue ""
+                                description = temp_3.css("div#tab-description").text.strip() rescue ""
+                                description_html = temp_3.css("div#tab-description").to_s.strip() rescue ""
+                                temp_4 = doc.css("div.product_image_wrapper.column.one-second img")
+                                t_im =  []
+                                temp_4.each do |t_4|
+                                  t_im << t_4.attr("src") rescue ""
+                                end
+                                puts image = t_im.uniq.join(", ") rescue ""
+                                PlaydistributionDetail.create(:url => detail_url,:vendor_code => sku, :title => title, :description_html => description_html, :description => description, :image => image)
+                                $logger.info "Inserted #{detail_url}"
+                              end
+                            rescue Exception => e
+                              begin
+                                PlaydistributionDetail.create(:url => detail_url)
+                                $logger.info "Inserted #{detail_url}"
+                              rescue
+                              end
+                            end
+                          end
                         end
-                        puts image = t_im.uniq.join(", ") rescue ""
-                        # csv << ["Detail URL","Sku","brand","title","description_html","description","image"]
-                        puts "-----"
-
-                        PlaydistributionDetail.create(:url => detail_url,:vendor_code => sku, :title => title, :description_html => description_html, :description => description, :image => image)
-                        $logger.info "Inserted #{detail_url}"
                       end
-                    rescue Exception => e
-                      begin
-                        PlaydistributionDetail.create(:url => detail_url)
-                        $logger.info "Inserted #{detail_url}"
-                      rescue
-                      end
+                      @i=@i+1
+                    rescue
+                      @i=@i+10
                     end
-                    
                   end
                 end
+                write_data_to_file(input_file_path_and_name)
               end
-              @i=@i+1
-            rescue
-              @i=@i+10
             end
           end
+          rescue Exception => e
+            puts  "Some problem in #{input_file_path_and_name} process Please Check"
+            $logger.info  "Some problem in #{input_file_path_and_name} process Please Check - #{e.message}"
+            $logger.info  e.backtrace
+          end
         end
-        write_data_to_file()
       end
     rescue Exception => e
       $logger.error "Error Occured - #{e.message}"
@@ -172,12 +182,11 @@ class PlaydistributionDataBuilderAgent
     end
   end
 
-  def write_data_to_file
+  def write_data_to_file(input_file_path_and_name)
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/playdistribution_data") unless File.directory?("#{File.dirname(__FILE__)}/playdistribution_data")
-    # time = DateTime.now.getutc.strftime("%d_%m_%Y_%H_%M_%S") rescue ""
-    file_name = "#{$site_details["playdistribution_output_file_name"]}"
-    csv = CSV.open(Rails.root.join("#{File.dirname(__FILE__)}", 'playdistribution_data/',file_name), "wb")
+    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub("_input_","_output_")
+    csv = CSV.open(output_file_path_and_name, "wb")
     csv << ["ref","Detail URL","Sku","brand","title","description_html","description","image"]
     $logger.info "-added headers--"
     allprods = PlaydistributionDetail.all
@@ -196,7 +205,7 @@ class PlaydistributionDataBuilderAgent
       end
       csv.close
       $logger.info "-xlsx--created locally--"
-      upload_file_to_ftp
+      upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
       puts "Data is not captured"
       csv.close
@@ -204,24 +213,26 @@ class PlaydistributionDataBuilderAgent
       send_email.deliver
     end
   end
-  def upload_file_to_ftp
+  def upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     #upload file to ftp
     begin
-      file_name = $site_details['playdistribution_output_file_name']
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
-        file_name = $site_details['playdistribution_output_file_name']
-        localfile = "#{File.dirname(__FILE__)}/playdistribution_data/#{file_name}"
-        remotefile = $site_details['server_output_path']+file_name
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        output_filename = output_file_path_and_name.to_s.split("/").last
+        remotefile_output_path = $site_details['server_output_path']+output_filename
         ftp.putbinaryfile(localfile, remotefile, 1024)
         $logger.info "Local Files Transfer"
         files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"
-         ftp.delete("#{File.dirname(__FILE__)}/#{$site_details['server_input_path']+$site_details['playdistribution_input_file_name']}") rescue ""
+        #Moved input and output ftp files to archive  path
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
+        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
+        #Moved input and output ftp files to archive  path
         ftp.close
         # Delete the INPUT file form, Local playdistribution_data
-        File.delete("#{Rails.root}/agents/playdistribution/playdistribution_data/#{$site_details['playdistribution_input_file_name']}") rescue ""
-        File.delete("#{Rails.root}/agents/playdistribution/playdistribution_data/#{file_name}") rescue "" #deleting  output file from local after sending to FTP
+        File.delete(input_file_path_and_name) rescue ""  #deleting  input file from local after sending to FTP
+        File.delete(output_file_path_and_name) rescue "" #deleting  output file from local after sending to FTP
         begin
           job_status = JobStatus.find_or_initialize_by(job_name: $site_details['playdistribution_details']['company_name'])
           job_status.updated_referer = DateTime.now
@@ -230,9 +241,11 @@ class PlaydistributionDataBuilderAgent
           $logger.error "Error Occured in job status #{e.message}"
           $logger.error e.backtrace
         end
-        
+
       end
-    rescue
+    rescue Exception => e
+      $logger.error "Error Occured in uploading file #{e.message}"
+      $logger.error e.backtrace
     end
   end
 end #class
