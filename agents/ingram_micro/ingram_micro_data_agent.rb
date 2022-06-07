@@ -100,7 +100,7 @@ class IngramMicroDataBuilderAgent
           end
         end
 
-        # Headless.ly do
+        Headless.ly do
         all_files =  Dir["#{File.dirname(__FILE__)}/ingram_micro_data/**/*.csv"]
         all_files.each do |input_file_path_and_name|
           begin
@@ -159,7 +159,7 @@ class IngramMicroDataBuilderAgent
             $logger.info  "Some problem in #{input_file_path_and_name} process Please Check"
           end
         end
-        # end #headless end
+        end #headless end
       end
     rescue Exception => e
       $logger.error "Error Occured - #{e.message}"
