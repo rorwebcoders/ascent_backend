@@ -74,8 +74,8 @@ class IngramMicroDataBuilderAgent
     begin
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/ingram_micro_data") unless File.directory?("#{File.dirname(__FILE__)}/ingram_micro_data")
-        if @options[:env] != "developments"
-          # IngramMicroDetail.destroy_all rescue ""
+        if @options[:env] != "development"
+          IngramMicroDetail.destroy_all rescue ""
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
