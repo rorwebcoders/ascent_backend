@@ -74,18 +74,24 @@ class IngramMicroDataBuilderAgent
     begin
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/ingram_micro_data") unless File.directory?("#{File.dirname(__FILE__)}/ingram_micro_data")
-        if @options[:env] != "development"
-          IngramMicroDetail.destroy_all rescue ""
+        if @options[:env] != "developments"
+          # IngramMicroDetail.destroy_all rescue ""
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
               $logger.info " Files Started Transfer from server to folder"
-              ftp.getbinaryfile("#{$site_details['server_input_path']+$site_details['ingram_micro_input_file_name']}", "#{Rails.root}/agents/ingram_micro/ingram_micro_data/"+$site_details['ingram_micro_input_file_name'],1024)
+              ftp.chdir("#{$site_details['server_input_path']}")
+              files = ftp.nlst('*.csv')
+              files.each do |file|
+                puts file
+                if file.to_s.starts_with?($site_details['ingram_micro_input_file_name'])
+                  ftp.getbinaryfile(file, "#{Rails.root}/agents/ingram_micro/ingram_micro_data/"+file,1024)
+                end
+              end
               sleep 5
               $logger.info "Files ended Transfer"
               puts "Files ended Transfer"
-              files = ftp.list
-              puts files
+              # puts files
               ftp.close
             end
           rescue Exception => e
@@ -93,57 +99,67 @@ class IngramMicroDataBuilderAgent
             $logger.error e.backtrace
           end
         end
-        Headless.ly do
-        @vendor_file="#{File.dirname(__FILE__)}/ingram_micro_data/#{$site_details["ingram_micro_input_file_name"]}"
-        if File.exists?(@vendor_file)
-          if(File.size(@vendor_file)>0)
-            Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
-            browser = Watir::Browser.new :firefox
-            browser.window.maximize
-            browser.goto "https://nz.ingrammicro.com/Site/Login"
-            browser.text_field(:id=>"okta-signin-username").set($site_details["ingram_micro_username"])
-            browser.text_field(:id=>"okta-signin-password").set($site_details["ingram_micro_password"])
-            browser.button(:id=>"okta-signin-submit").fire_event :click
-            sleep 5
-            handler  = File.open(@vendor_file)
-            csv_string = handler.read.encode!("UTF-8", invalid: :replace).gsub("\r","")
-            CSV.parse(csv_string, :headers => :first_row, liberal_parsing: true, col_sep: "|").each_with_index do |line,index|
-              product_code = line[0]
-              $logger.info "Processing #{product_code}"
-              url = "https://nz.ingrammicro.com/site/productdetail?id=#{product_code}"
-              exist_data = IngramMicroDetail.where(:url => url)
-              if exist_data.count == 0
-                begin
-                  browser.goto "#{url}"
-                  sleep 2
-                  doc = Nokogiri::HTML.parse(browser.html)
-                  title = doc.css("div.clsProductFullDesc").text.gsub("Less","").strip() rescue ""
-                  vendor_code = doc.css("div.Top-Sku-VPN-UPC").text.split("VPN:").last.strip().split("SKU:").first.strip() rescue ""
-                  description = doc.css("div#collapseZero").text.strip rescue ""
-                  description_html = doc.css("div#collapseZero").to_s rescue ""
-                  specs = doc.css("div#collapseOne").text rescue ""
-                  specs_html = doc.css("div#collapseOne").to_s rescue ""
-                  temp_1 = doc.css("div#slide0 img")
-                  temp_image = []
-                  temp_1.each do |t_1|
-                    temp_image << t_1.attr("src").gsub("/300/","/500/") rescue ""
+
+        # Headless.ly do
+        all_files =  Dir["#{File.dirname(__FILE__)}/ingram_micro_data/**/*.csv"]
+        all_files.each do |input_file_path_and_name|
+          begin
+            if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['ingram_micro_input_file_name'])
+              if File.exists?(input_file_path_and_name)
+                if(File.size(input_file_path_and_name)>0)
+                  # Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
+                  browser = Watir::Browser.new :firefox
+                  browser.window.maximize
+                  browser.goto "https://nz.ingrammicro.com/Site/Login"
+                  browser.text_field(:id=>"okta-signin-username").set($site_details["ingram_micro_username"])
+                  browser.text_field(:id=>"okta-signin-password").set($site_details["ingram_micro_password"])
+                  browser.button(:id=>"okta-signin-submit").fire_event :click
+                  sleep 5
+                  handler  = File.open(input_file_path_and_name)
+                  csv_string = handler.read.encode!("UTF-8", invalid: :replace).gsub("\r","")
+                  CSV.parse(csv_string, :headers => :first_row, liberal_parsing: true, col_sep: "|").each_with_index do |line,index|
+                    puts product_code = line[0]
+                    $logger.info "Processing #{product_code}"
+                    url = "https://nz.ingrammicro.com/site/productdetail?id=#{product_code}"
+                    exist_data = IngramMicroDetail.where(:url => url)
+                    if exist_data.count == 0
+                      begin
+                        browser.goto "#{url}"
+                        sleep 2
+                        doc = Nokogiri::HTML.parse(browser.html)
+                        title = doc.css("div.clsProductFullDesc").text.gsub("Less","").strip() rescue ""
+                        vendor_code = doc.css("div.Top-Sku-VPN-UPC").text.split("VPN:").last.strip().split("SKU:").first.strip() rescue ""
+                        description = doc.css("div#collapseZero").text.strip rescue ""
+                        description_html = doc.css("div#collapseZero").to_s rescue ""
+                        specs = doc.css("div#collapseOne").text rescue ""
+                        specs_html = doc.css("div#collapseOne").to_s rescue ""
+                        temp_1 = doc.css("div#slide0 img")
+                        temp_image = []
+                        temp_1.each do |t_1|
+                          temp_image << t_1.attr("src").gsub("/300/","/500/") rescue ""
+                        end
+                        temp_image = temp_image.uniq.join(", ")
+                        IngramMicroDetail.create(:url => url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
+                        $logger.info "Inserted #{product_code}"
+                      rescue
+                        begin
+                          IngramMicroDetail.create(:url => url, :ref_id => product_code)
+                          $logger.info "Inserted #{product_code}"
+                        rescue
+                        end
+                      end
+                    end
                   end
-                  temp_image = temp_image.uniq.join(", ")
-                  IngramMicroDetail.create(:url => url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
-                  $logger.info "Inserted #{product_code}"
-                rescue
-                  begin
-                    IngramMicroDetail.create(:url => url, :ref_id => product_code)
-                    $logger.info "Inserted #{product_code}"
-                  rescue
-                  end
+                  write_data_to_file(input_file_path_and_name)
                 end
               end
             end
-            end #headless end
-            write_data_to_file()
+          rescue
+            puts  "Some problem in #{input_file_path_and_name} process Please Check"
+            $logger.info  "Some problem in #{input_file_path_and_name} process Please Check"
           end
         end
+        # end #headless end
       end
     rescue Exception => e
       $logger.error "Error Occured - #{e.message}"
@@ -158,11 +174,11 @@ class IngramMicroDataBuilderAgent
     end
   end
 
-  def write_data_to_file
+  def write_data_to_file(input_file_path_and_name)
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/ingram_micro_data") unless File.directory?("#{File.dirname(__FILE__)}/ingram_micro_data")
-    file_name = "#{$site_details["ingram_micro_output_file_name"]}"
-    csv = CSV.open(Rails.root.join("#{File.dirname(__FILE__)}", 'ingram_micro_data/',file_name), "wb")
+    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub("_input_","_output_")
+    csv = CSV.open(output_file_path_and_name, "wb")
     csv << ["ref","Detail URL","vendor_code","title","description_html","description","specs_html","specs","image"]
     $logger.info "-added headers--"
     allprods = IngramMicroDetail.all
@@ -185,7 +201,7 @@ class IngramMicroDataBuilderAgent
       end
       csv.close
       $logger.info "-xlsx--created locally--"
-      upload_file_to_ftp
+      upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
       puts "Data is not captured"
       csv.close
@@ -194,29 +210,25 @@ class IngramMicroDataBuilderAgent
       send_email.deliver
     end
   end
-  def upload_file_to_ftp
-    #upload file to ftp
+  def upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     begin
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
-        file_name = $site_details['ingram_micro_output_file_name']
-        localfile = "#{File.dirname(__FILE__)}/ingram_micro_data/#{file_name}"
-        remotefile = $site_details['server_output_path']+file_name
-        ftp.putbinaryfile(localfile, remotefile, 1024)
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        output_filename = output_file_path_and_name.to_s.split("/").last
+        remotefile_output_path = $site_details['server_output_path']+output_filename
+        ftp.putbinaryfile(output_file_path_and_name, remotefile_output_path, 1024)
         $logger.info "Local Files Transfer"
         files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"
-        #  for now dont use this backup logicc.....
-        # ftp.rename($site_details['server_input_path']+$site_details['ingram_micro_input_file_name'], $site_details['server_archive_path']+$site_details['ingram_micro_input_file_name'].gsub(".csv","_#{Date.today.to_s}_#{Time.now.to_i}.csv"))
-        # ftp.rename($site_details['server_output_path']+$site_details['ingram_micro_output_file_name'], $site_details['server_archive_path']+$site_details['ingram_micro_output_file_name'].gsub(".csv","_#{Date.today.to_s}_#{Time.now.to_i}.csv"))
-        #  for now dont use this backup logicc.....
-        #once we uploaded file, we need to delete them
-        # Delete the INPUT file form, FTP
-        ftp.delete("#{File.dirname(__FILE__)}/#{$site_details['server_input_path']+$site_details['ingram_micro_input_file_name']}") rescue ""
+        #Moved input and output ftp files to archive  path
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
+        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
+        #Moved input and output ftp files to archive  path
         ftp.close
         # Delete the INPUT file form, Local ingram_micro_data
-        File.delete("#{Rails.root}/agents/ingram_micro/ingram_micro_data/#{$site_details['ingram_micro_input_file_name']}") rescue ""
-        File.delete("#{Rails.root}/agents/ingram_micro/ingram_micro_data/#{file_name}") rescue "" #deleting  output file from local after sending to FTP
+        File.delete(input_file_path_and_name) rescue ""  #deleting  input file from local after sending to FTP
+        File.delete(output_file_path_and_name) rescue "" #deleting  output file from local after sending to FTP
         begin
           job_status = JobStatus.find_or_initialize_by(job_name: $site_details['ingram_micro_details']['company_name'])
           job_status.updated_referer = DateTime.now
