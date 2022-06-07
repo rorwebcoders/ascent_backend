@@ -231,7 +231,7 @@ class SektorDataBuilderAgent
         input_file_name = input_file_path_and_name.to_s.split("/").last
         output_filename = output_file_path_and_name.to_s.split("/").last
         remotefile_output_path = $site_details['server_output_path']+output_filename
-        ftp.putbinaryfile(localfile, remotefile, 1024)
+        ftp.putbinaryfile(output_file_path_and_name, remotefile_output_path, 1024)
         $logger.info "Local Files Transfer"
         files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"
