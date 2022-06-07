@@ -107,7 +107,7 @@ class IngramMicroDataBuilderAgent
             if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['ingram_micro_input_file_name'])
               if File.exists?(input_file_path_and_name)
                 if(File.size(input_file_path_and_name)>0)
-                  # Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
+                  Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
                   browser = Watir::Browser.new :firefox
                   browser.window.maximize
                   browser.goto "https://nz.ingrammicro.com/Site/Login"
