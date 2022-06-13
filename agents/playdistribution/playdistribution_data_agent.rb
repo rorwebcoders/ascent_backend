@@ -71,8 +71,8 @@ class PlaydistributionDataBuilderAgent
     begin
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/playdistribution_data") unless File.directory?("#{File.dirname(__FILE__)}/playdistribution_data")
-        if @options[:env] != "development"
-          PlaydistributionProductDetail.destroy_all rescue ""
+        if @options[:env] != "developments"
+          PlaydistributionDetail.destroy_all rescue ""
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -130,7 +130,7 @@ class PlaydistributionDataBuilderAgent
                               if (sku.to_s != "" &&  @p_code.include?(sku))
                                 puts sku
                                 title = doc.css("h2.title").text.strip() rescue ""
-                                puts  brand = temp_3.css("div#tab-product_brand_tab-content h3").text.strip() rescue ""
+                                brand = temp_3.css("div#tab-product_brand_tab-content h3").text.strip() rescue ""
                                 description = temp_3.css("div#tab-description").text.strip() rescue ""
                                 description_html = temp_3.css("div#tab-description").to_s.strip() rescue ""
                                 temp_4 = doc.css("div.product_image_wrapper.column.one-second img")
@@ -139,15 +139,11 @@ class PlaydistributionDataBuilderAgent
                                   t_im << t_4.attr("src") rescue ""
                                 end
                                 puts image = t_im.uniq.join(", ") rescue ""
-                                PlaydistributionDetail.create(:url => detail_url,:vendor_code => sku, :title => title, :description_html => description_html, :description => description, :image => image)
+                                PlaydistributionDetail.create(:ref_id=>sku, :url => detail_url, :brand => brand,:vendor_code => sku, :title => title, :description_html => description_html, :description => description, :image => image)
                                 $logger.info "Inserted #{detail_url}"
                               end
                             rescue Exception => e
-                              begin
-                                PlaydistributionDetail.create(:url => detail_url)
-                                $logger.info "Inserted #{detail_url}"
-                              rescue
-                              end
+                              
                             end
                           end
                         end
@@ -193,18 +189,21 @@ class PlaydistributionDataBuilderAgent
     if allprods.length > 0
       allprods.each_with_index do |p_id,counter_row|
         begin
+          puts ref_id = p_id['ref_id']
           url = p_id['url']
-          sku = p_id['sku']
+          puts sku = p_id['vendor_code']
+          puts brand = p_id['brand']
           title = p_id['title']
           description_html = p_id['description_html']
           description = p_id['description']
           temp_image = p_id['image']
-          csv <<  [url ,sku ,title ,description_html ,description ,temp_image]
+          csv <<  [ref_id,url ,sku ,brand,title ,description_html ,description ,temp_image]
         rescue
         end
       end
       csv.close
       $logger.info "-xlsx--created locally--"
+      puts "-xlsx--created locally--"
       upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
       puts "Data is not captured"
@@ -218,9 +217,10 @@ class PlaydistributionDataBuilderAgent
     begin
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
-        input_file_name = input_file_path_and_name.to_s.split("/").last
-        output_filename = output_file_path_and_name.to_s.split("/").last
-        remotefile_output_path = $site_details['server_output_path']+output_filename
+        # puts output_file_path_and_name
+         input_file_name = input_file_path_and_name.to_s.split("/").last
+         output_filename = output_file_path_and_name.to_s.split("/").last
+         remotefile_output_path = $site_details['server_output_path']+output_filename
         ftp.putbinaryfile(output_file_path_and_name, remotefile_output_path, 1024)
         $logger.info "Local Files Transfer"
         files = ftp.list
