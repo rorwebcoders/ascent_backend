@@ -170,14 +170,14 @@ class AnywarenzDataBuilderAgent
     if allprods.length > 0
       allprods.each_with_index do |p_id,counter_row|
         begin
-          product_code = p_id['product_code']
-          url = p_id['url']
-          sku = p_id['sku']
-          brand = p_id['brand']
-          title = p_id['title']
-          description_html = p_id['description_html']
-          description = p_id['description']
-          temp_image = p_id['temp_image']
+          product_code = p_id['product_code'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          url = p_id['url'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          sku = p_id['sku'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          brand = p_id['brand'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          title = p_id['title'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          description_html = p_id['description_html'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          description = p_id['description'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          temp_image = p_id['temp_image'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
           csv <<  [product_code ,url ,sku ,brand ,title ,description_html ,description ,temp_image]
         rescue
         end

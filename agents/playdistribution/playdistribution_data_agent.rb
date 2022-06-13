@@ -189,14 +189,14 @@ class PlaydistributionDataBuilderAgent
     if allprods.length > 0
       allprods.each_with_index do |p_id,counter_row|
         begin
-          puts ref_id = p_id['ref_id']
-          url = p_id['url']
-          puts sku = p_id['vendor_code']
-          puts brand = p_id['brand']
-          title = p_id['title']
-          description_html = p_id['description_html']
-          description = p_id['description']
-          temp_image = p_id['image']
+          puts ref_id = p_id['ref_id'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          url = p_id['url'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          puts sku = p_id['vendor_code'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          puts brand = p_id['brand'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          title = p_id['title'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          description_html = p_id['description_html'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          description = p_id['description'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          temp_image = p_id['image'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
           csv <<  [ref_id,url ,sku ,brand,title ,description_html ,description ,temp_image]
         rescue
         end

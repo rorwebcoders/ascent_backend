@@ -195,20 +195,20 @@ class SektorDataBuilderAgent
     if allprods.length > 0
       allprods.each_with_index do |p_id,counter_row|
         begin
-          url = p_id['url']
-          ref_id = p_id['ref_id']
-          stock_code = p_id['stock_code']
-          vendor_code = p_id['vendor_code']
-          brand = p_id['brand']
-          title = p_id['title']
-          short_description = p_id['short_description']
-          specs_html = p_id['specs_html']
-          specs = p_id['specs']
-          description_html = p_id['description_html']
-          description = p_id['description']
-          image = p_id['image']
-          pdfs = p_id['pdfs']
-          video = p_id['video']
+          url = p_id['url'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          ref_id = p_id['ref_id'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          stock_code = p_id['stock_code'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          vendor_code = p_id['vendor_code'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          brand = p_id['brand'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          title = p_id['title'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          short_description = p_id['short_description'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          specs_html = p_id['specs_html'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          specs = p_id['specs'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          description_html = p_id['description_html'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          description = p_id['description'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          image = p_id['image'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          pdfs = p_id['pdfs'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
+          video = p_id['video'].to_s.gsub("\r"," ").gsub("\n"," ").gsub("  "," ").strip() rescue ""
           csv <<  [url, ref_id, stock_code, vendor_code, brand, title, short_description, specs_html, specs, description_html, description, image, pdfs, video]
         rescue
         end
