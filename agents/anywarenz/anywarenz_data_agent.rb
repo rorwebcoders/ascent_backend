@@ -68,7 +68,7 @@ class AnywarenzDataBuilderAgent
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/anywarenz_data") unless File.directory?("#{File.dirname(__FILE__)}/anywarenz_data")
         if @options[:env] != "development"
-          AnywarenzDetail.destroy_all rescue ""
+          
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -98,6 +98,7 @@ class AnywarenzDataBuilderAgent
               puts input_file_path_and_name
               if File.exists?(input_file_path_and_name)
                 if(File.size(input_file_path_and_name)>0)
+                  AnywarenzDetail.destroy_all rescue ""
                   workbook = Roo::CSV.new(input_file_path_and_name, csv_options: {encoding: 'iso-8859-1:utf-8'})
                   workbook.default_sheet = workbook.sheets.first
                   ((workbook.first_row + 1)..workbook.last_row).each do |row|

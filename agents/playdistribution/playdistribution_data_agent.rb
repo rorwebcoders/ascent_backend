@@ -72,7 +72,7 @@ class PlaydistributionDataBuilderAgent
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/playdistribution_data") unless File.directory?("#{File.dirname(__FILE__)}/playdistribution_data")
         if @options[:env] != "developments"
-          PlaydistributionDetail.destroy_all rescue ""
+          
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -102,6 +102,7 @@ class PlaydistributionDataBuilderAgent
             if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['playdistribution_input_file_name'])
             if File.exists?(input_file_path_and_name)
               if(File.size(input_file_path_and_name)>0)
+                PlaydistributionDetail.destroy_all rescue ""
                 @csv_string= (File.open(input_file_path_and_name)).read.encode!("UTF-8", "iso-8859-1", invalid: :replace)
                 @p_code = []
                 CSV.parse(@csv_string, :headers => true, liberal_parsing: true).each_with_index do |r,i|

@@ -68,7 +68,7 @@ class SektorDataBuilderAgent
     begin
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/sektor_data") unless File.directory?("#{File.dirname(__FILE__)}/sektor_data")
-        SektorProductDetail.destroy_all rescue ""
+        # SektorProductDetail.destroy_all rescue ""
         if @options[:env] != "development"
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
@@ -99,6 +99,7 @@ class SektorDataBuilderAgent
               if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['sektor_input_file_name'])
               if File.exists?(input_file_path_and_name)
                 if(File.size(input_file_path_and_name)>0)
+                  SektorProductDetail.destroy_all rescue ""
                   Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
                   browser = Watir::Browser.new :firefox
                   browser.window.maximize
