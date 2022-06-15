@@ -69,7 +69,7 @@ class SektorDataBuilderAgent
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/sektor_data") unless File.directory?("#{File.dirname(__FILE__)}/sektor_data")
         # SektorProductDetail.destroy_all rescue ""
-        if @options[:env] != "development"
+        if @options[:env] != "developments"
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -92,14 +92,14 @@ class SektorDataBuilderAgent
             $logger.error e.backtrace
           end
         end
-        Headless.ly do
+        # Headless.ly do
           all_files =  Dir["#{File.dirname(__FILE__)}/sektor_data/**/*.csv"]
           all_files.each do |input_file_path_and_name|
             begin
               if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['sektor_input_file_name'])
               if File.exists?(input_file_path_and_name)
                 if(File.size(input_file_path_and_name)>0)
-                  SektorProductDetail.destroy_all rescue ""
+                  SektorDetail.destroy_all rescue ""
                   Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver"
                   browser = Watir::Browser.new :firefox
                   browser.window.maximize
@@ -171,7 +171,7 @@ class SektorDataBuilderAgent
             end
           end
         end
-      end
+      # end
     rescue Exception => e
       $logger.error "Error Occured - #{e.message}"
       $logger.error e.backtrace
