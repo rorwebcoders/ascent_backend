@@ -92,7 +92,7 @@ class SektorDataBuilderAgent
             $logger.error e.backtrace
           end
         end
-        # Headless.ly do
+        Headless.ly do
           all_files =  Dir["#{File.dirname(__FILE__)}/sektor_data/**/*.csv"]
           all_files.each do |input_file_path_and_name|
             begin
@@ -171,7 +171,7 @@ class SektorDataBuilderAgent
             end
           end
         end
-      # end
+      end
     rescue Exception => e
       $logger.error "Error Occured - #{e.message}"
       $logger.error e.backtrace
