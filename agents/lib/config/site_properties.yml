@@ -21,12 +21,12 @@ development:
   sektor_details: {"company_name" : "Sektor"}
   anywarenz_input_file_name: "anywarenz_input"
   anywarenz_output_file_name: "anywarenz_output.csv"
-  email_to: ["sudharshana.b@rorwebcoders.com"]
-  email_from: "itctenders8@gmail.com"
+  email_to: ["santhosh.r@rorwebcoders.com"]
+  email_from: "ascentnoreplymailer@gmail.com"
   playdistribution_input_file_name: "playdistribution_input"
   playdistribution_output_file_name: "playdistribution_output.csv"
-
-
+  dove_input_file_name: "dove_dealerpricelist"
+  dove_output_file_name: "dove_output.csv"
   
 production:
   server_domain_name: ""
@@ -50,3 +50,5 @@ production:
   email_from: "itctenders8@gmail.com"
   playdistribution_input_file_name: "playdistribution_input"
   playdistribution_output_file_name: "playdistribution_output.csv"
+  dove_input_file_name: "dove_dealerpricelist"
+  dove_output_file_name: "dove_output.csv"

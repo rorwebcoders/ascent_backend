@@ -1,0 +1,2 @@
+class DoveDetail < ApplicationRecord
+end
