@@ -27,6 +27,10 @@ development:
   playdistribution_output_file_name: "playdistribution_output.csv"
   dove_input_file_name: "dove_dealerpricelist"
   dove_output_file_name: "dove_output.csv"
+  dicker_username: ""
+  dicker_acc_num: ""
+  dicker_password: ""
+  dicker_file_name: "dicker_input.csv"
   
 production:
   server_domain_name: ""
@@ -52,3 +56,7 @@ production:
   playdistribution_output_file_name: "playdistribution_output.csv"
   dove_input_file_name: "dove_dealerpricelist"
   dove_output_file_name: "dove_output.csv"
+  dicker_username: ""
+  dicker_acc_num: ""
+  dicker_password: ""
+  dicker_file_name: "dicker_input.csv"
