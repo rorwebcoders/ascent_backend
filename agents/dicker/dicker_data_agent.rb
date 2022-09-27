@@ -71,14 +71,14 @@ class DickerDataBuilderAgent
   end
 
   def start_processing
-    Headless.ly do
+    # Headless.ly do
       begin      
         if $db_connection_established
           Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")        
-          # Selenium::WebDriver::Chrome::Service.driver_path = "C:/Chromedriver/chromedriver.exe"
-          # browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
-          Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
-          browser = Watir::Browser.new :firefox        
+          Selenium::WebDriver::Chrome::Service.driver_path = "C:/Chromedriver/chromedriver.exe"
+          browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
+          # Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
+          # browser = Watir::Browser.new :firefox        
           browser.window.maximize
           url = "https://portal.dickerdata.co.nz/Account/Login?ReturnUrl=%2Fhome"
           browser.goto "#{url}"
@@ -90,13 +90,13 @@ class DickerDataBuilderAgent
           browser.input(:id => "userName").set user_name
           browser.input(:id => "accountId").set acc_num
           browser.input(:id => "password").set password
-          sleep 2
+          sleep 20
           browser.button(:class => "login_button").click
-          sleep 2
+          sleep 20
           browser.goto("https://portal.dickerdata.co.nz/buy")
-          sleep 5
+          sleep 15
           browser.div(:text => "Browse by Vendors").click
-          sleep 2
+          sleep 20
           doc1 = Nokogiri::HTML(browser.html)                  
           temp_1 = doc1.css("div.logo-footer")
           brand = []
@@ -132,8 +132,11 @@ class DickerDataBuilderAgent
                     sleep 2
                     browser.back
                     sleep 2
-                  rescue              
+                  rescue => e
                     $logger.info "Error #{product_code}"                
+                    $logger.info "Error #{product_url}" 
+                    $logger.info "Error #{e.message}"                
+
                   end
                 end
               end            
@@ -154,7 +157,7 @@ class DickerDataBuilderAgent
         #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
         ActiveRecord::Base.clear_active_connections!
       end
-    end
+    # end
   end
 
   def write_data_to_file()
