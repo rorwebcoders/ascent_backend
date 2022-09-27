@@ -71,14 +71,14 @@ class DickerDataBuilderAgent
   end
 
   def start_processing
-    # Headless.ly do
+    Headless.ly do
       begin      
         if $db_connection_established
           Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")        
-          Selenium::WebDriver::Chrome::Service.driver_path = "C:/Chromedriver/chromedriver.exe"
-          browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
-          # Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
-          # browser = Watir::Browser.new :firefox        
+          # Selenium::WebDriver::Chrome::Service.driver_path = "C:/Chromedriver/chromedriver.exe"
+          # browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
+          Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
+          browser = Watir::Browser.new :firefox        
           browser.window.maximize
           url = "https://portal.dickerdata.co.nz/Account/Login?ReturnUrl=%2Fhome"
           browser.goto "#{url}"
@@ -157,7 +157,7 @@ class DickerDataBuilderAgent
         #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
         ActiveRecord::Base.clear_active_connections!
       end
-    # end
+    end
   end
 
   def write_data_to_file()
