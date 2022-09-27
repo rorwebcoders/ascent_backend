@@ -71,86 +71,89 @@ class DickerDataBuilderAgent
   end
 
   def start_processing
-    begin
-      if $db_connection_established
-        Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")        
-        # Selenium::WebDriver::Chrome::Service.driver_path = "C:/Chromedriver/chromedriver.exe"
-        # browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
-        browser = Watir::Browser.new :firefox        
-        browser.window.maximize
-        url = "https://portal.dickerdata.co.nz/Account/Login?ReturnUrl=%2Fhome"
-        browser.goto "#{url}"
-        sleep 5
-        user_name = $site_details['dicker_username'] 
-        acc_num = $site_details['dicker_acc_num']
-        password = $site_details['dicker_password']
-        sleep 2
-        browser.input(:id => "userName").set user_name
-        browser.input(:id => "accountId").set acc_num
-        browser.input(:id => "password").set password
-        sleep 2
-        browser.button(:class => "login_button").click
-        sleep 2
-        browser.goto("https://portal.dickerdata.co.nz/buy")
-        sleep 5
-        browser.div(:text => "Browse by Vendors").click
-        sleep 2
-        doc1 = Nokogiri::HTML(browser.html)                  
-        temp_1 = doc1.css("div.logo-footer")
-        brand = []
-        temp_1.each do |t_1|          
-          brand << t_1.text.gsub(" ","") rescue ""          
-        end
-        puts brand
-        brand.each do |brd|
-          browser.goto("https://portal.dickerdata.co.nz/buy?brand=#{brd}")
+    Headless.ly do
+      begin      
+        if $db_connection_established
+          Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")        
+          # Selenium::WebDriver::Chrome::Service.driver_path = "C:/Chromedriver/chromedriver.exe"
+          # browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
+          Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
+          browser = Watir::Browser.new :firefox        
+          browser.window.maximize
+          url = "https://portal.dickerdata.co.nz/Account/Login?ReturnUrl=%2Fhome"
+          browser.goto "#{url}"
           sleep 5
-          
-          doc2 = Nokogiri::HTML(browser.html)
-          temp_2 = doc2.css("a.ng-tns-c361-0") rescue ""
-          temp_2.each_with_index do |t_2,ind| 
-            product_url = "https://portal.dickerdata.co.nz"+t_2.attr('href') rescue ""
-            exist_data = DickerDetail.where(:url => product_url)           
-            if exist_data.count == 0              
-              if ind != 0                
-                begin                                    
-                  browser.goto(product_url)
-                  sleep 5
-                  doc3 = Nokogiri::HTML(browser.html)              
-                  puts title = doc3.css("div.description-detail")[0].text.strip rescue ""
-                  vendor_code = product_url.split("?").first.split("/").last.gsub("%2F","/") rescue ""
-                  product_code = vendor_code                  
-                  description = doc3.css("div.product-note").text.strip rescue ""
-                  description_html = doc3.css("div.product-note").to_s rescue ""
-                  specs = doc3.css("table.product-detail-content-tabs-table").css("tr").map{|e| e.css('td.width-x30').text+': '+e.css('td.spec-info').text.strip}.join("\n") rescue ""
-                  specs_html = doc3.css("table.product-detail-content-tabs-table").to_s rescue ""
-                  temp_image = doc3.css("img.carousel-img").attr("src").value.gsub("../../","https://portal.dickerdata.co.nz/") rescue ""
-                  DickerDetail.create(:url => product_url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
-                  $logger.info "Inserted #{product_code}"                  
-                  sleep 2
-                  browser.back
-                  sleep 2
-                rescue              
-                  $logger.info "Error #{product_code}"                
+          user_name = $site_details['dicker_username'] 
+          acc_num = $site_details['dicker_acc_num']
+          password = $site_details['dicker_password']
+          sleep 2
+          browser.input(:id => "userName").set user_name
+          browser.input(:id => "accountId").set acc_num
+          browser.input(:id => "password").set password
+          sleep 2
+          browser.button(:class => "login_button").click
+          sleep 2
+          browser.goto("https://portal.dickerdata.co.nz/buy")
+          sleep 5
+          browser.div(:text => "Browse by Vendors").click
+          sleep 2
+          doc1 = Nokogiri::HTML(browser.html)                  
+          temp_1 = doc1.css("div.logo-footer")
+          brand = []
+          temp_1.each do |t_1|          
+            brand << t_1.text.gsub(" ","") rescue ""          
+          end
+          puts brand
+          brand.each do |brd|
+            browser.goto("https://portal.dickerdata.co.nz/buy?brand=#{brd}")
+            sleep 5
+            
+            doc2 = Nokogiri::HTML(browser.html)
+            temp_2 = doc2.css("a.ng-tns-c361-0") rescue ""
+            temp_2.each_with_index do |t_2,ind| 
+              product_url = "https://portal.dickerdata.co.nz"+t_2.attr('href') rescue ""
+              exist_data = DickerDetail.where(:url => product_url)           
+              if exist_data.count == 0              
+                if ind != 0                
+                  begin                                    
+                    browser.goto(product_url)
+                    sleep 5
+                    doc3 = Nokogiri::HTML(browser.html)              
+                    puts title = doc3.css("div.description-detail")[0].text.strip rescue ""
+                    vendor_code = product_url.split("?").first.split("/").last.gsub("%2F","/") rescue ""
+                    product_code = vendor_code                  
+                    description = doc3.css("div.product-note").text.strip rescue ""
+                    description_html = doc3.css("div.product-note").to_s rescue ""
+                    specs = doc3.css("table.product-detail-content-tabs-table").css("tr").map{|e| e.css('td.width-x30').text+': '+e.css('td.spec-info').text.strip}.join("\n") rescue ""
+                    specs_html = doc3.css("table.product-detail-content-tabs-table").to_s rescue ""
+                    temp_image = doc3.css("img.carousel-img").attr("src").value.gsub("../../","https://portal.dickerdata.co.nz/") rescue ""
+                    DickerDetail.create(:url => product_url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
+                    $logger.info "Inserted #{product_code}"                  
+                    sleep 2
+                    browser.back
+                    sleep 2
+                  rescue              
+                    $logger.info "Error #{product_code}"                
+                  end
                 end
-              end
-            end            
-          end          
-        end
-        write_data_to_file()
-        puts output_file_path_and_name = $site_details["dicker_file_name"]
-        upload_file_to_ftp(output_file_path_and_name)
-      end                         
-    rescue Exception => e
-      $logger.error "Error Occured - #{e.message}"
-      $logger.error e.backtrace
-      sleep 10
-      send_email= DickerMailer.no_data_alert_mail()
-      send_email.deliver
-    ensure
-      $logger.close
-      #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
-      ActiveRecord::Base.clear_active_connections!
+              end            
+            end          
+          end
+          write_data_to_file()
+          puts output_file_path_and_name = $site_details["dicker_file_name"]
+          upload_file_to_ftp(output_file_path_and_name)
+        end                         
+      rescue Exception => e
+        $logger.error "Error Occured - #{e.message}"
+        $logger.error e.backtrace
+        sleep 10
+        send_email= DickerMailer.no_data_alert_mail()
+        send_email.deliver
+      ensure
+        $logger.close
+        #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
+        ActiveRecord::Base.clear_active_connections!
+      end
     end
   end
 
