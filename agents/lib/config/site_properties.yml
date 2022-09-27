@@ -33,30 +33,30 @@ development:
   dicker_file_name: "dicker_input.csv"
   
 production:
-  server_domain_name: ""
-  server_username: ""
-  server_password: ""
-  server_input_path: ""
-  server_output_path: ""
-  server_archive_path: ""
-  ingram_micro_input_file_name: "ingram_input"
-  ingram_micro_username: "giri@ascent.co.nz"
-  ingram_micro_password: "#sgCMx*9$k"
-  sektor_input_file_name: "sektor_input"
-  sektor_output_file_name: "sektor_output.csv"
-  anywarenz_details: {"company_name" : "Anywarenz"}
-  ingram_micro_details: {"company_name" : "Ingram-micro"}
-  playdistribution_details: {"company_name" : "Playdistribution"}
-  sektor_details: {"company_name" : "Sektor"}
-  anywarenz_input_file_name: "anywarenz_input"
-  anywarenz_output_file_name: "anywarenz_output.csv"
-  email_to: ["sudharshana.b@rorwebcoders.com", "ukumar@rorwebcoders.com"]
-  email_from: "itctenders8@gmail.com"
-  playdistribution_input_file_name: "playdistribution_input"
-  playdistribution_output_file_name: "playdistribution_output.csv"
-  dove_input_file_name: "dove_dealerpricelist"
-  dove_output_file_name: "dove_output.csv"
-  dicker_username: ""
-  dicker_acc_num: ""
-  dicker_password: ""
-  dicker_file_name: "dicker_input.csv"
+ server_domain_name: ""
+ server_username: ""
+ server_password: ""
+ server_input_path: ""
+ server_output_path: ""
+ server_archive_path: ""
+ ingram_micro_input_file_name: "ingram_input"
+ ingram_micro_username: "mailto:giri@ascent.co.nz"
+ ingram_micro_password: "#sgCMx*9$k"
+ sektor_input_file_name: "sektor_input"
+ sektor_output_file_name: "sektor_output.csv"
+ anywarenz_details: {"company_name" : "Anywarenz"}
+ ingram_micro_details: {"company_name" : "Ingram-micro"}
+ playdistribution_details: {"company_name" : "Playdistribution"}
+ sektor_details: {"company_name" : "Sektor"}
+ anywarenz_input_file_name: "anywarenz_input"
+ anywarenz_output_file_name: "anywarenz_output.csv"
+ email_to: ["mailto:sudharshana.b@rorwebcoders.com", "mailto:ukumar@rorwebcoders.com"]
+ email_from: "mailto:itctenders8@gmail.com"
+ playdistribution_input_file_name: "playdistribution_input"
+ playdistribution_output_file_name: "playdistribution_output.csv"
+ dove_input_file_name: "dove_dealerpricelist"
+ dove_output_file_name: "dove_output.csv"
+ dicker_username: ""
+ dicker_acc_num: ""
+ dicker_password: ""
+ dicker_file_name: "dicker_input.csv"
