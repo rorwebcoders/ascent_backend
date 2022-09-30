@@ -185,7 +185,7 @@ class DoveDataBuilderAgent
       end
       csv.close
       $logger.info "-xlsx--created locally--"
-      # upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
+      upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
       puts "Data is not captured"
       csv.close
@@ -199,7 +199,6 @@ class DoveDataBuilderAgent
     begin
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
-        # byebug
         input_file_name = input_file_path_and_name.to_s.split("/").last
         output_filename = output_file_path_and_name.to_s.split("/").last
         remotefile_output_path = $site_details['server_output_path']+output_filename
