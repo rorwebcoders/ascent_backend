@@ -161,7 +161,7 @@ class DoveDataBuilderAgent
   def write_data_to_file(input_file_path_and_name)
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/dove_data") unless File.directory?("#{File.dirname(__FILE__)}/dove_data")
-    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub("_input_","_output_")
+    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub(" ","_output_")
     csv = CSV.open(output_file_path_and_name, "wb")
     csv << ["ref","Detail URL","vendor_code","title","description_html","description","specs_html","specs","image"]
     $logger.info "-added headers--"
