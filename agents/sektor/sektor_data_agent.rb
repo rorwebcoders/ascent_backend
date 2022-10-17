@@ -237,8 +237,8 @@ class SektorDataBuilderAgent
         files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"
         #Moved input and output ftp files to archive  path
-        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
-        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name) rescue ""
+        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename) rescue ""
         #Moved input and output ftp files to archive  path
         ftp.close
         # Delete the INPUT file form, Local sektor_data

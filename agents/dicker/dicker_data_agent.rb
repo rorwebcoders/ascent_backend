@@ -191,7 +191,7 @@ class DickerDataBuilderAgent
     else
       puts "Data is not captured"
       csv.close
-      Write a code to send alert email to me and you
+      #Write a code to send alert email to me and you
       send_email= DickerMailer.alert_data_email()
       send_email.deliver
     end
