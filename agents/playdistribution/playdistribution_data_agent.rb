@@ -71,8 +71,8 @@ class PlaydistributionDataBuilderAgent
     begin
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/playdistribution_data") unless File.directory?("#{File.dirname(__FILE__)}/playdistribution_data")
-        if @options[:env] != "developments"
-          
+        if @options[:env] != "development"
+
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -100,65 +100,68 @@ class PlaydistributionDataBuilderAgent
         all_files.each do |input_file_path_and_name|
           begin
             if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['playdistribution_input_file_name'])
-            if File.exists?(input_file_path_and_name)
-              if(File.size(input_file_path_and_name)>0)
-                PlaydistributionDetail.destroy_all rescue ""
-                @csv_string= (File.open(input_file_path_and_name)).read.encode!("UTF-8", "iso-8859-1", invalid: :replace)
-                @p_code = []
-                CSV.parse(@csv_string, :headers => true, liberal_parsing: true).each_with_index do |r,i|
-                  @p_code << r[0]
-                end
-                brand_url = "https://www.playdistribution.com/ourbrands/"
-                doc1 = Nokogiri::HTML(open(brand_url))
-                temp_1 = doc1.css("a.button_dark")
-                temp_1.each do |t_1|
-                  @i = 1
-                  num = 10
-                  while @i < num
-                    puts url = "https://www.playdistribution.com"+t_1["href"]+"page/#{@i}/"
-                    begin
-                      doc2 = Nokogiri::HTML(open(url))
-                      temp_2 =  doc2.css("ul.products li.product-type-simple")
-                      temp_2.each do |t_2|
-                        puts detail_url = t_2.css("a")[0]["href"] rescue ""
-                        if detail_url.to_s !=  ""
-                          exist_data = PlaydistributionDetail.where(:url => detail_url)
-                          if exist_data.count == 0
-                            begin
-                              doc = Nokogiri::HTML(open(detail_url))
-                              temp_3 =  doc.css("div.sections_group")
-                              sku = temp_3.css("span.sku").text  rescue ""
-                              if (sku.to_s != "" &&  @p_code.include?(sku))
-                                puts sku
-                                title = doc.css("h2.title").text.strip() rescue ""
-                                brand = temp_3.css("div#tab-product_brand_tab-content h3").text.strip() rescue ""
-                                description = temp_3.css("div#tab-description").text.strip() rescue ""
-                                description_html = temp_3.css("div#tab-description").to_s.strip() rescue ""
-                                temp_4 = doc.css("div.product_image_wrapper.column.one-second img")
-                                t_im =  []
-                                temp_4.each do |t_4|
-                                  t_im << t_4.attr("src") rescue ""
+              if File.exists?(input_file_path_and_name)
+                if(File.size(input_file_path_and_name)>0)
+                  byebug
+                  write_data_to_file(input_file_path_and_name)
+                  PlaydistributionDetail.destroy_all rescue ""
+                  @csv_string= (File.open(input_file_path_and_name)).read.encode!("UTF-8", "iso-8859-1", invalid: :replace)
+                  @p_code = []
+                  CSV.parse(@csv_string, :headers => true, liberal_parsing: true).each_with_index do |r,i|
+                    @p_code << r[0]
+                  end
+                  brand_url = "https://www.playdistribution.com/ourbrands/"
+                  doc1 = Nokogiri::HTML(open(brand_url))
+                  temp_1 = doc1.css("a.button_dark")
+                  temp_1.each do |t_1|
+                    @i = 1
+                    num = 10
+                    while @i < num
+                      puts url = "https://www.playdistribution.com"+t_1["href"]+"page/#{@i}/"
+                      begin
+                        doc2 = Nokogiri::HTML(open(url))
+                        temp_2 =  doc2.css("ul.products li.product-type-simple")
+                        temp_2.each do |t_2|
+                          puts detail_url = t_2.css("a")[0]["href"] rescue ""
+                          if detail_url.to_s !=  ""
+                            exist_data = PlaydistributionDetail.where(:url => detail_url)
+                            if exist_data.count == 0
+                              begin
+                                doc = Nokogiri::HTML(open(detail_url))
+                                temp_3 =  doc.css("div.sections_group")
+                                sku = temp_3.css("span.sku").text  rescue ""
+                                if (sku.to_s != "" &&  @p_code.include?(sku))
+                                  byebug
+                                  puts sku
+                                  title = doc.css("h2.title").text.strip() rescue ""
+                                  brand = temp_3.css("div#tab-product_brand_tab-content h3").text.strip() rescue ""
+                                  description = temp_3.css("div#tab-description").text.strip() rescue ""
+                                  description_html = temp_3.css("div#tab-description").to_s.strip() rescue ""
+                                  temp_4 = doc.css("div.product_image_wrapper.column.one-second img")
+                                  t_im =  []
+                                  temp_4.each do |t_4|
+                                    t_im << t_4.attr("src") rescue ""
+                                  end
+                                  puts image = t_im.uniq.join(", ") rescue ""
+                                  PlaydistributionDetail.create(:ref_id=>sku, :url => detail_url, :brand => brand,:vendor_code => sku, :title => title, :description_html => description_html, :description => description, :image => image)
+                                  $logger.info "Inserted #{detail_url}"
                                 end
-                                puts image = t_im.uniq.join(", ") rescue ""
-                                PlaydistributionDetail.create(:ref_id=>sku, :url => detail_url, :brand => brand,:vendor_code => sku, :title => title, :description_html => description_html, :description => description, :image => image)
-                                $logger.info "Inserted #{detail_url}"
+                              rescue Exception => e
+
                               end
-                            rescue Exception => e
-                              
                             end
                           end
                         end
+                        @i=@i+1
+                      rescue
+                        @i=@i+10
                       end
-                      @i=@i+1
-                    rescue
-                      @i=@i+10
                     end
                   end
+                  write_data_to_file(input_file_path_and_name)
                 end
-                write_data_to_file(input_file_path_and_name)
               end
             end
-          end
           rescue Exception => e
             puts  "Some problem in #{input_file_path_and_name} process Please Check"
             $logger.info  "Some problem in #{input_file_path_and_name} process Please Check - #{e.message}"
@@ -207,6 +210,11 @@ class PlaydistributionDataBuilderAgent
       puts "-xlsx--created locally--"
       upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
+      Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
+        ftp.passive = true
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
+      end
       puts "Data is not captured"
       csv.close
       send_email= PlaydistributionMailer.alert_data_email()
@@ -219,9 +227,9 @@ class PlaydistributionDataBuilderAgent
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
         # puts output_file_path_and_name
-         input_file_name = input_file_path_and_name.to_s.split("/").last
-         output_filename = output_file_path_and_name.to_s.split("/").last
-         remotefile_output_path = $site_details['server_output_path']+output_filename
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        output_filename = output_file_path_and_name.to_s.split("/").last
+        remotefile_output_path = $site_details['server_output_path']+output_filename
         ftp.putbinaryfile(output_file_path_and_name, remotefile_output_path, 1024)
         $logger.info "Local Files Transfer"
         files = ftp.list
