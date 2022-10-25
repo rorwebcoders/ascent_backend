@@ -182,7 +182,7 @@ class DickerDataBuilderAgent
                         end
                       end
                     end
-                    write_data_to_file()
+                    write_data_to_file(input_file_path_and_name)
                     puts output_file_path_and_name = $site_details["dicker_file_name"]
                     upload_file_to_ftp(output_file_path_and_name)
                   end
@@ -210,7 +210,7 @@ class DickerDataBuilderAgent
     end
   end
 
-  def write_data_to_file()
+  def write_data_to_file(input_file_path_and_name)
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")
     puts output_file_path_and_name = $site_details["dicker_file_name"]
