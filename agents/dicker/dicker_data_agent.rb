@@ -71,14 +71,40 @@ class DickerDataBuilderAgent
   end
 
   def start_processing
-    # Headless.ly do
+    Headless.ly do
       begin
         if $db_connection_established
           Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")
-          Selenium::WebDriver::Chrome::Service.driver_path = "C:/ChromeDriver/chromedriver.exe"
+
+          if @options[:env] != "development"
+
+          begin
+            Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
+              ftp.passive = true
+              $logger.info " Files Started Transfer from server to folder"
+              ftp.chdir("#{$site_details['server_input_path']}")
+              files = ftp.nlst('*.csv')
+              files.each do |file|
+                puts file
+                if file.to_s.starts_with?($site_details['dicker_input_file_name'])
+                  ftp.getbinaryfile(file, "#{Rails.root}/agents/dicker/dicker_data/"+file,1024)
+                end
+              end
+              sleep 5
+              $logger.info "Files ended Transfer"
+              puts "Files ended Transfer"
+              ftp.close
+            end
+          rescue Exception => e
+            $logger.error "Error Occured in FTP connection- #{e.message}"
+            $logger.error e.backtrace
+
+          end
+        end
+          # Selenium::WebDriver::Chrome::Service.driver_path = "C:/ChromeDriver/chromedriver.exe"
           # browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
-          # Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
-          browser = Watir::Browser.new :chrome
+          Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
+          browser = Watir::Browser.new :firefox
           browser.window.maximize
           url = "https://portal.dickerdata.co.nz/Account/Login?ReturnUrl=%2Fhome"
           browser.goto "#{url}"
@@ -181,7 +207,7 @@ class DickerDataBuilderAgent
         #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
         ActiveRecord::Base.clear_active_connections!
       end
-    # end
+    end
   end
 
   def write_data_to_file()
