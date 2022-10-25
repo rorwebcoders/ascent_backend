@@ -183,7 +183,6 @@ class DickerDataBuilderAgent
                       end
                     end
                     write_data_to_file(input_file_path_and_name)
-                    upload_file_to_ftp(input_file_path_and_name)
                   end
 
                 end
