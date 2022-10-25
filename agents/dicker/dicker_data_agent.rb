@@ -213,7 +213,7 @@ class DickerDataBuilderAgent
   def write_data_to_file(input_file_path_and_name)
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")
-    puts output_file_path_and_name = $site_details["dicker_file_name"]
+    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub("_input_","_output_")
     csv = CSV.open("#{File.dirname(__FILE__)}/dicker_data/#{output_file_path_and_name}", 'wb')
     csv << ["ref","Detail URL","vendor_code","title","description_html","description","specs_html","specs","image"]
     $logger.info "-added headers--"
