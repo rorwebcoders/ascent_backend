@@ -183,8 +183,7 @@ class DickerDataBuilderAgent
                       end
                     end
                     write_data_to_file(input_file_path_and_name)
-                    puts output_file_path_and_name = $site_details["dicker_file_name"]
-                    upload_file_to_ftp(output_file_path_and_name)
+                    upload_file_to_ftp(input_file_path_and_name)
                   end
 
                 end
@@ -237,7 +236,7 @@ class DickerDataBuilderAgent
       end
       csv.close
       $logger.info "-xlsx--created locally--"
-      upload_file_to_ftp(output_file_path_and_name)
+      upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
@@ -251,24 +250,27 @@ class DickerDataBuilderAgent
       send_email.deliver
     end
   end
-  def upload_file_to_ftp(output_file_path_and_name)
+  def upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     begin
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
-        output_filename = "#{File.dirname(__FILE__)}/dicker_data/#{output_file_path_and_name}"
-        remotefile_output_path = $site_details['server_output_path']+output_filename.split("/").last
-        ftp.putbinaryfile("#{output_filename.gsub("./","")}", remotefile_output_path, 1024)
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        output_filename = output_file_path_and_name.to_s.split("/").last
+        remotefile_output_path = $site_details['server_output_path']+output_filename
+        ftp.putbinaryfile(output_file_path_and_name, remotefile_output_path, 1024)
         $logger.info "Local Files Transfer"
         files = ftp.list
         $logger.info "Local Files Transferred to FTP - #{files}"
         #Moved input and output ftp files to archive  path
-        ftp.rename($site_details['server_output_path']+output_filename.split("/").last, $site_details['server_archive_path']+output_filename.split("/").last)
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
+        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
         #Moved input and output ftp files to archive  path
         ftp.close
-        # Delete the INPUT file form, Local dicker_data
-        File.delete("#{output_filename.gsub("./","")}") rescue "" #deleting  output file from local after sending to FTP
+        # Delete the INPUT file form, Local ingram_micro_data
+        File.delete(input_file_path_and_name) rescue ""  #deleting  input file from local after sending to FTP
+        File.delete(output_file_path_and_name) rescue "" #deleting  output file from local after sending to FTP
         begin
-          job_status = JobStatus.find_or_initialize_by(job_name: $site_details['dicker_details']['company_name'])
+          job_status = JobStatus.find_or_initialize_by(job_name: $site_details['ingram_micro_details']['company_name'])
           job_status.updated_referer = DateTime.now
           job_status.save
         rescue Exception => e
