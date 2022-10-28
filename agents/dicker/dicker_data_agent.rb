@@ -146,7 +146,6 @@ class DickerDataBuilderAgent
                           sleep 10
                           doc3 = Nokogiri::HTML(browser.html)
                           vendor_code = product_url.split("?").first.split("/").last.gsub("%2F","/") rescue ""
-                          byebug
                           product_code = vendor_code
                           if (product_code.to_s != "")
                             puts title = doc3.css("div.description-detail")[0].text.strip rescue ""
