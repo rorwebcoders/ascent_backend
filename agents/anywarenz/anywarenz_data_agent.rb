@@ -68,7 +68,13 @@ class AnywarenzDataBuilderAgent
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/anywarenz_data") unless File.directory?("#{File.dirname(__FILE__)}/anywarenz_data")
         if @options[:env] != "development"
-          
+          begin
+            Dir.foreach("#{File.dirname(__FILE__)}/anywarenz_data") do |f|
+              fn = File.join("#{File.dirname(__FILE__)}/anywarenz_data", f)
+              File.delete(fn) if f != '.' && f != '..'
+            end
+          rescue
+          end
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -105,25 +111,30 @@ class AnywarenzDataBuilderAgent
                     begin
                       product_code = workbook.row(row)[0]
                       if product_code.strip.to_s != ''
-                        url = "https://www.anywarenz.co.nz/products/#{product_code}"
-                        doc = Nokogiri::HTML(open(url))
-                        title = doc.css("h1.product-meta__title.heading.h1").text.strip() rescue ""
-                        $logger.info "Processing #{title}"
-                        sku = doc.css("span.product-meta__sku-number").text.strip() rescue ""
-                        brand = doc.css("a.product-meta__vendor.link.link--accented")[0].text.strip() rescue ""
-                        description = doc.css("div.rte.text--pull")[0].text.strip() rescue ""
-                        description_html = doc.css("div.rte.text--pull").to_s.strip() rescue ""
-                        temp_image = []
-                        temp_1 = doc.css("div.product-gallery__thumbnail-list a")
-                        temp_1.each do |t_1|
-                          temp_image << t_1["href"].gsub("_1024x","_500x").gsub("//cdn","http://cdn") rescue ""
-                        end
-                        temp_image = temp_image.join(", ")
-                        if(sku !=  "" && product_code.to_s == sku.to_s)
-                          exist_data = AnywarenzDetail.where(:url => url)
-                          if exist_data.count == 0
-                            AnywarenzDetail.create(:product_code => product_code, :url => url, :sku => sku, :brand => brand, :title => title, :description_html => description_html, :description => description, :temp_image => temp_image)
-                            $logger.info "Inserted #{product_code}"
+                        listing_url = "https://www.anywarenz.co.nz/search?type=product&options%5Bprefix%5D=last&options%5Bunavailable_products%5D=last&q=#{product_code}"
+                        listing_doc = Nokogiri::HTML(open(listing_url))
+                        details_url = listing_doc.at('a.product-item__image-wrapper').attr('href') rescue ''
+                        if details_url.to_s != ''
+                          url = "https://www.anywarenz.co.nz#{details_url}"
+                          doc = Nokogiri::HTML(open(url))
+                          title = doc.css("h1.product-meta__title.heading.h1").text.strip() rescue ""
+                          $logger.info "Processing #{title}"
+                          sku = doc.css("span.product-meta__sku-number").text.strip() rescue ""
+                          brand = doc.css("a.product-meta__vendor.link.link--accented")[0].text.strip() rescue ""
+                          description = doc.css("div.rte.text--pull")[0].text.strip() rescue ""
+                          description_html = doc.css("div.rte.text--pull").to_s.strip() rescue ""
+                          temp_image = []
+                          temp_1 = doc.css("div.product-gallery__thumbnail-list a")
+                          temp_1.each do |t_1|
+                            temp_image << t_1["href"].gsub("_1024x","_500x").gsub("//cdn","http://cdn") rescue ""
+                          end
+                          temp_image = temp_image.join(", ")
+                          if(sku !=  "" && product_code.to_s == sku.to_s)
+                            exist_data = AnywarenzDetail.where(:url => url)
+                            if exist_data.count == 0
+                              AnywarenzDetail.create(:product_code => product_code, :url => url, :sku => sku, :brand => brand, :title => title, :description_html => description_html, :description => description, :temp_image => temp_image)
+                              $logger.info "Inserted #{product_code}"
+                            end
                           end
                         end
                       end
@@ -187,10 +198,13 @@ class AnywarenzDataBuilderAgent
       $logger.info "-xlsx--created locally--"
       upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
+      Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
+        ftp.passive = true
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+"#{input_file_name.gsub('.csv', '_review.csv')}")
+      end
       puts "Data is not captured"
       csv.close
-      send_email= AnywarenzMailer.alert_data_email()
-      send_email.deliver
     end
   end
   def upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
@@ -207,7 +221,6 @@ class AnywarenzDataBuilderAgent
         $logger.info "Local Files Transferred to FTP - #{files}"
         #Moved input and output ftp files to archive  path
         ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name) rescue ""
-        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename) rescue ""
         #Moved input and output ftp files to archive  path
         ftp.close
         # Delete the INPUT file form, Local anywarenz_data

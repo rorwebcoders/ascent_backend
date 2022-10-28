@@ -71,40 +71,46 @@ class DickerDataBuilderAgent
   end
 
   def start_processing
-    Headless.ly do
+    # Headless.ly do
       begin
         if $db_connection_established
           Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")
 
           if @options[:env] != "development"
-
-          begin
-            Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
-              ftp.passive = true
-              $logger.info " Files Started Transfer from server to folder"
-              ftp.chdir("#{$site_details['server_input_path']}")
-              files = ftp.nlst('*.csv')
-              files.each do |file|
-                puts file
-                if file.to_s.starts_with?($site_details['dicker_input_file_name'])
-                  ftp.getbinaryfile(file, "#{Rails.root}/agents/dicker/dicker_data/"+file,1024)
-                end
+            begin
+              Dir.foreach("#{File.dirname(__FILE__)}/dicker_data") do |f|
+                fn = File.join("#{File.dirname(__FILE__)}/dicker_data", f)
+                File.delete(fn) if f != '.' && f != '..'
               end
-              sleep 5
-              $logger.info "Files ended Transfer"
-              puts "Files ended Transfer"
-              ftp.close
+            rescue
             end
-          rescue Exception => e
-            $logger.error "Error Occured in FTP connection- #{e.message}"
-            $logger.error e.backtrace
+            begin
+              Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
+                ftp.passive = true
+                $logger.info " Files Started Transfer from server to folder"
+                ftp.chdir("#{$site_details['server_input_path']}")
+                files = ftp.nlst('*.csv')
+                files.each do |file|
+                  puts file
+                  if file.to_s.starts_with?($site_details['dicker_input_file_name'])
+                    ftp.getbinaryfile(file, "#{Rails.root}/agents/dicker/dicker_data/"+file,1024)
+                  end
+                end
+                sleep 5
+                $logger.info "Files ended Transfer"
+                puts "Files ended Transfer"
+                ftp.close
+              end
+            rescue Exception => e
+              $logger.error "Error Occured in FTP connection- #{e.message}"
+              $logger.error e.backtrace
 
+            end
           end
-        end
-          # Selenium::WebDriver::Chrome::Service.driver_path = "C:/ChromeDriver/chromedriver.exe"
+          Selenium::WebDriver::Chrome::Service.driver_path = "C:/ChromeDriver/chromedriver.exe"
           # browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
-          Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
-          browser = Watir::Browser.new :firefox
+          # Selenium::WebDriver::Firefox::Service.driver_path = "/usr/local/bin/geckodriver" # need to specify driver path while running script in cron
+          browser = Watir::Browser.new :chrome
           browser.window.maximize
           url = "https://portal.dickerdata.co.nz/Account/Login?ReturnUrl=%2Fhome"
           browser.goto "#{url}"
@@ -119,17 +125,6 @@ class DickerDataBuilderAgent
           sleep 20
           browser.button(:class => "login_button").click
           sleep 20
-          browser.goto("https://portal.dickerdata.co.nz/buy")
-          sleep 15
-          browser.div(:text => "Browse by Vendors").click
-          sleep 20
-          doc1 = Nokogiri::HTML(browser.html)
-          temp_1 = doc1.css("div.logo-footer")
-          brand = []
-          temp_1.each do |t_1|
-            brand << t_1.text.gsub(" ","") rescue ""
-          end
-          puts brand
           all_files =  Dir["#{File.dirname(__FILE__)}/dicker_data/**/*.csv"]
           all_files.each do |input_file_path_and_name|
             begin
@@ -142,49 +137,36 @@ class DickerDataBuilderAgent
                     CSV.parse(@csv_string, :headers => true, liberal_parsing: true).each_with_index do |r,i|
                       @p_code << r[0]
                     end
-                    brand.each do |brd|
-                      browser.goto("https://portal.dickerdata.co.nz/buy?brand=#{brd}")
-                      sleep 10
-											doc2 = Nokogiri::HTML(browser.html)
-                      temp_2 = doc2.css('td.result_desc').css('a')
-                      puts temp_2.count
-                      temp_2.each_with_index do |t_2,ind|
-                        product_url = "https://portal.dickerdata.co.nz"+t_2.attr('href') rescue ""
-                        exist_data = DickerDetail.where(:url => product_url)
-                        if exist_data.count == 0
-                          if ind != 0
-                            begin
-                              browser.goto(product_url)
-                              sleep 10
-                              doc3 = Nokogiri::HTML(browser.html)
-                              puts title = doc3.css("div.description-detail")[0].text.strip rescue ""
-                              vendor_code = product_url.split("?").first.split("/").last.gsub("%2F","/") rescue ""
-                              product_code = vendor_code
-                              if (product_code.to_s != "" &&  @p_code.include?(product_code))
-                                description = doc3.css("div.product-note").text.strip rescue ""
-                                description_html = doc3.css("div.product-note").to_s rescue ""
-                                specs = doc3.css("table.product-detail-content-tabs-table").css("tr").map{|e| e.css('td.width-x30').text+': '+e.css('td.spec-info').text.strip}.join("\n") rescue ""
-                                specs_html = doc3.css("table.product-detail-content-tabs-table").to_s rescue ""
-                                temp_image = doc3.css("img.carousel-img").attr("src").value.gsub("../../","https://portal.dickerdata.co.nz/") rescue ""
-                                DickerDetail.create(:url => product_url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
-                                $logger.info "Inserted #{product_code}"
-                                sleep 2
-                                browser.back
-                                sleep 5
-                              end
-                            rescue => e
-                              $logger.info "Error #{product_code}"
-                              $logger.info "Error #{product_url}"
-                              $logger.info "Error #{e.message}"
-
-                            end
+                    @p_code.each do |each_code|
+                      product_url = "https://portal.dickerdata.co.nz/buy/product/"+each_code
+                      exist_data = DickerDetail.where(:url => product_url)
+                      if exist_data.count == 0
+                        begin
+                          browser.goto(product_url)
+                          sleep 10
+                          doc3 = Nokogiri::HTML(browser.html)
+                          vendor_code = product_url.split("?").first.split("/").last.gsub("%2F","/") rescue ""
+                          byebug
+                          product_code = vendor_code
+                          if (product_code.to_s != "")
+                            puts title = doc3.css("div.description-detail")[0].text.strip rescue ""
+                            description = doc3.css("div.product-note").text.strip rescue ""
+                            description_html = doc3.css("div.product-note").to_s rescue ""
+                            specs = doc3.css("table.product-detail-content-tabs-table").css("tr").map{|e| e.css('td.width-x30').text+': '+e.css('td.spec-info').text.strip}.join("\n") rescue ""
+                            specs_html = doc3.css("table.product-detail-content-tabs-table").to_s rescue ""
+                            temp_image = doc3.css("img.carousel-img").attr("src").value.gsub("../../","https://portal.dickerdata.co.nz/") rescue ""
+                            DickerDetail.create(:url => product_url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
+                            $logger.info "Inserted #{product_code}"
                           end
+                        rescue Exception => e
+                          $logger.info "Error #{product_code}"
+                          $logger.info "Error #{product_url}"
+                          $logger.info "Error #{e.message}"
                         end
                       end
                     end
                     write_data_to_file(input_file_path_and_name)
                   end
-
                 end
               end
             rescue Exception => e
@@ -205,7 +187,7 @@ class DickerDataBuilderAgent
         #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
         ActiveRecord::Base.clear_active_connections!
       end
-    end
+    # end
   end
 
   def write_data_to_file(input_file_path_and_name)
@@ -240,7 +222,7 @@ class DickerDataBuilderAgent
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
         input_file_name = input_file_path_and_name.to_s.split("/").last
-        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+"#{input_file_name.gsub('.csv', '_review.csv')}")
       end
       puts "Data is not captured"
       csv.close
@@ -262,7 +244,6 @@ class DickerDataBuilderAgent
         $logger.info "Local Files Transferred to FTP - #{files}"
         #Moved input and output ftp files to archive  path
         ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
-        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
         #Moved input and output ftp files to archive  path
         ftp.close
         # Delete the INPUT file form, Local ingram_micro_data

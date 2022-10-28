@@ -72,7 +72,13 @@ class PlaydistributionDataBuilderAgent
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/playdistribution_data") unless File.directory?("#{File.dirname(__FILE__)}/playdistribution_data")
         if @options[:env] != "development"
-
+          begin
+            Dir.foreach("#{File.dirname(__FILE__)}/playdistribution_data") do |f|
+              fn = File.join("#{File.dirname(__FILE__)}/playdistribution_data", f)
+              File.delete(fn) if f != '.' && f != '..'
+            end
+          rescue
+          end
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -213,7 +219,7 @@ class PlaydistributionDataBuilderAgent
       Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
         ftp.passive = true
         input_file_name = input_file_path_and_name.to_s.split("/").last
-        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+"#{input_file_name.gsub('.csv', '_review.csv')}")
       end
       puts "Data is not captured"
       csv.close
@@ -236,7 +242,6 @@ class PlaydistributionDataBuilderAgent
         $logger.info "Local Files Transferred to FTP - #{files}"
         #Moved input and output ftp files to archive  path
         ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
-        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
         #Moved input and output ftp files to archive  path
         ftp.close
         # Delete the INPUT file form, Local playdistribution_data

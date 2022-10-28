@@ -75,7 +75,13 @@ class DoveDataBuilderAgent
       if $db_connection_established
         Dir.mkdir("#{File.dirname(__FILE__)}/dove_data") unless File.directory?("#{File.dirname(__FILE__)}/dove_data")
         if @options[:env] != "development"
-          
+          begin
+            Dir.foreach("#{File.dirname(__FILE__)}/dove_data") do |f|
+              fn = File.join("#{File.dirname(__FILE__)}/dove_data", f)
+              File.delete(fn) if f != '.' && f != '..'
+            end
+          rescue
+          end
           begin
             Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
               ftp.passive = true
@@ -113,7 +119,7 @@ class DoveDataBuilderAgent
                     puts product_code = line[1]
                     $logger.info "Processing #{product_code}"                    
                     url = line[12]                    
-                    exist_data = DoveDetail.where(:url => url)
+                    exist_data = DoveDetail.where(:ref_id => product_code)
                     if exist_data.count == 0
                       begin                                                                                              
                         doc = Nokogiri::HTML(open(url))                        
@@ -139,9 +145,11 @@ class DoveDataBuilderAgent
                 end
               end
             end
-          rescue
+          rescue Exception => e
             puts  "Some problem in #{input_file_path_and_name} process Please Check"
             $logger.info  "Some problem in #{input_file_path_and_name} process Please Check"
+            $logger.error "Error Occured - #{e.message}"
+            $logger.error e.backtrace
           end
         end        
       end
@@ -161,7 +169,7 @@ class DoveDataBuilderAgent
   def write_data_to_file(input_file_path_and_name)
     #create excel version of product details
     Dir.mkdir("#{File.dirname(__FILE__)}/dove_data") unless File.directory?("#{File.dirname(__FILE__)}/dove_data")
-    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub(" ","_output_")
+    puts output_file_path_and_name = input_file_path_and_name.to_s.gsub("_input_","_output_")
     csv = CSV.open(output_file_path_and_name, "wb")
     csv << ["ref","Detail URL","vendor_code","title","description_html","description","specs_html","specs","image"]
     $logger.info "-added headers--"
@@ -187,6 +195,11 @@ class DoveDataBuilderAgent
       $logger.info "-xlsx--created locally--"
       upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
     else
+      Net::FTP.open($site_details["server_domain_name"], $site_details["server_username"], $site_details["server_password"]) do |ftp|
+        ftp.passive = true
+        input_file_name = input_file_path_and_name.to_s.split("/").last
+        ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+"#{input_file_name.gsub('.csv', '_review.csv')}")
+      end
       puts "Data is not captured"
       csv.close
       # Write a code to send alert email to me and you
@@ -208,7 +221,6 @@ class DoveDataBuilderAgent
         $logger.info "Local Files Transferred to FTP - #{files}"
         #Moved input and output ftp files to archive  path
         ftp.rename($site_details['server_input_path']+input_file_name, $site_details['server_archive_path']+input_file_name)
-        ftp.rename($site_details['server_output_path']+output_filename, $site_details['server_archive_path']+output_filename)
         #Moved input and output ftp files to archive  path
         ftp.close
         # Delete the INPUT file form, Local dove_data
