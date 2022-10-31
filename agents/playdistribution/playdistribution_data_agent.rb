@@ -221,8 +221,8 @@ class PlaydistributionDataBuilderAgent
       end
       puts "Data is not captured"
       csv.close
-      send_email= PlaydistributionMailer.alert_data_email()
-      send_email.deliver
+      # send_email= PlaydistributionMailer.alert_data_email()
+      # send_email.deliver
     end
   end
   def upload_file_to_ftp(input_file_path_and_name,output_file_path_and_name)
