@@ -71,7 +71,7 @@ class DickerDataBuilderAgent
   end
 
   def start_processing
-    Headless.ly do
+    # Headless.ly do
       begin
         if $db_connection_established
           Dir.mkdir("#{File.dirname(__FILE__)}/dicker_data") unless File.directory?("#{File.dirname(__FILE__)}/dicker_data")
@@ -107,9 +107,9 @@ class DickerDataBuilderAgent
 
             end
           end
-          # Selenium::WebDriver::Chrome::Service.driver_path = "C:/ChromeDriver/chromedriver.exe"
+          Selenium::WebDriver::Chrome::Service.driver_path = "C:/ChromeDriver/chromedriver.exe"
           # browser = Watir::Browser.new :chrome#, driver_path: chromedriver_path
-          Selenium::WebDriver::Chrome::Service.driver_path = "/usr/local/bin/chromedriver" # need to specify driver path while running script in cron
+          # Selenium::WebDriver::Chrome::Service.driver_path = "/usr/local/bin/chromedriver" # need to specify driver path while running script in cron
           browser = Watir::Browser.new :chrome
           browser.window.maximize
           url = "https://portal.dickerdata.co.nz/Account/Login?ReturnUrl=%2Fhome"
@@ -143,18 +143,19 @@ class DickerDataBuilderAgent
                       if exist_data.count == 0
                         begin
                           browser.goto(product_url)
-                          sleep 10
+                          browser.div(:class => 'title blade-title-font').wait_until_present
                           doc3 = Nokogiri::HTML(browser.html)
                           vendor_code = product_url.split("?").first.split("/").last.gsub("%2F","/") rescue ""
                           product_code = vendor_code
                           if (product_code.to_s != "")
-                            puts title = doc3.css("div.description-detail")[0].text.strip rescue ""
+                          	puts title = doc3.css("div.description-detail")[0].text.strip rescue ""
                             description = doc3.css("div.product-note").text.strip rescue ""
                             description_html = doc3.css("div.product-note").to_s rescue ""
                             specs = doc3.css("table.product-detail-content-tabs-table").css("tr").map{|e| e.css('td.width-x30').text+': '+e.css('td.spec-info').text.strip}.join("\n") rescue ""
+                            brand = doc3.css('div.produc-secondary-title-wrapper > span.bold-text').select{|e| e.text.include?'BRAND'}[0].next_element.text rescue ''
                             specs_html = doc3.css("table.product-detail-content-tabs-table").to_s rescue ""
                             temp_image = doc3.css("img.carousel-img").attr("src").value.gsub("../../","https://portal.dickerdata.co.nz/") rescue ""
-                            DickerDetail.create(:url => product_url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
+                            DickerDetail.create(:url => product_url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image, :brand => brand)
                             $logger.info "Inserted #{product_code}"
                           end
                         rescue Exception => e
@@ -186,7 +187,7 @@ class DickerDataBuilderAgent
         #~ #Our program will automatically will close the DB connection. But even making sure for the safety purpose.
         ActiveRecord::Base.clear_active_connections!
       end
-    end
+    # end
   end
 
   def write_data_to_file(input_file_path_and_name)
