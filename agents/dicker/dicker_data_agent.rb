@@ -143,7 +143,7 @@ class DickerDataBuilderAgent
                       if exist_data.count == 0
                         begin
                           browser.goto(product_url)
-                          browser.div(:class => 'title blade-title-font').wait_until_present
+                          browser.div(:class => 'title blade-title-font').wait_until(&:present?)
                           doc3 = Nokogiri::HTML(browser.html)
                           vendor_code = product_url.split("?").first.split("/").last.gsub("%2F","/") rescue ""
                           product_code = vendor_code
