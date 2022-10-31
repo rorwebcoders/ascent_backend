@@ -108,7 +108,6 @@ class PlaydistributionDataBuilderAgent
             if input_file_path_and_name.to_s.split("/").last.starts_with?($site_details['playdistribution_input_file_name'])
               if File.exists?(input_file_path_and_name)
                 if(File.size(input_file_path_and_name)>0)
-                  byebug
                   write_data_to_file(input_file_path_and_name)
                   PlaydistributionDetail.destroy_all rescue ""
                   @csv_string= (File.open(input_file_path_and_name)).read.encode!("UTF-8", "iso-8859-1", invalid: :replace)
@@ -137,7 +136,6 @@ class PlaydistributionDataBuilderAgent
                                 temp_3 =  doc.css("div.sections_group")
                                 sku = temp_3.css("span.sku").text  rescue ""
                                 if (sku.to_s != "" &&  @p_code.include?(sku))
-                                  byebug
                                   puts sku
                                   title = doc.css("h2.title").text.strip() rescue ""
                                   brand = temp_3.css("div#tab-product_brand_tab-content h3").text.strip() rescue ""
