@@ -116,9 +116,9 @@ class DoveDataBuilderAgent
                   handler  = File.open(input_file_path_and_name)
                   csv_string = handler.read.encode!("UTF-8").gsub("\r","")
                   CSV.parse(csv_string, headers: true, col_sep: ",").each do |line|
-                    puts product_code = line[1]
+                    puts product_code = line[0]
                     $logger.info "Processing #{product_code}"                    
-                    url = line[12]                    
+                    url = line[1]                    
                     exist_data = DoveDetail.where(:ref_id => product_code)
                     if exist_data.count == 0
                       begin                                                                                              
