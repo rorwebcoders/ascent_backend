@@ -123,7 +123,7 @@ class IngramMicroDataBuilderAgent
                   sleep 5
                   handler  = File.open(input_file_path_and_name)
                   csv_string = handler.read.encode!("UTF-8", invalid: :replace).gsub("\r","")
-                  CSV.parse(csv_string, :headers => :first_row, liberal_parsing: true, col_sep: "|").each_with_index do |line,index|
+                  CSV.parse(csv_string, :headers => :first_row, liberal_parsing: true, col_sep: ",").each_with_index do |line,index|
                     puts product_code = line[0]
                     $logger.info "Processing #{product_code}"
                     url = "https://nz.ingrammicro.com/site/productdetail?id=#{product_code}"
@@ -134,19 +134,21 @@ class IngramMicroDataBuilderAgent
                         sleep 2
                         doc = Nokogiri::HTML.parse(browser.html)
                         title = doc.css("div.clsProductFullDesc").text.gsub("Less","").strip() rescue ""
-                        vendor_code = doc.css("div.Top-Sku-VPN-UPC").text.split("VPN:").last.strip().split("SKU:").first.strip() rescue ""
-                        description = doc.css("div#collapseZero").text.strip rescue ""
-                        description_html = doc.css("div#collapseZero").to_s rescue ""
-                        specs = doc.css("div#collapseOne").text rescue ""
-                        specs_html = doc.css("div#collapseOne").to_s rescue ""
-                        temp_1 = doc.css("div#slide0 img")
-                        temp_image = []
-                        temp_1.each do |t_1|
-                          temp_image << t_1.attr("src").gsub("/300/","/500/") rescue ""
+                        if title.to_s != ''
+                          vendor_code = doc.css("div.Top-Sku-VPN-UPC").text.split("VPN:").last.strip().split("SKU:").first.strip() rescue ""
+                          description = doc.css("div#collapseZero").text.strip rescue ""
+                          description_html = doc.css("div#collapseZero").to_s rescue ""
+                          specs = doc.css("div#collapseOne").text rescue ""
+                          specs_html = doc.css("div#collapseOne").to_s rescue ""
+                          temp_1 = doc.css("div#slide0 img")
+                          temp_image = []
+                          temp_1.each do |t_1|
+                            temp_image << t_1.attr("src").gsub("/300/","/500/") rescue ""
+                          end
+                          temp_image = temp_image.uniq.join(", ")
+                          IngramMicroDetail.create(:url => url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
+                          $logger.info "Inserted #{product_code}"
                         end
-                        temp_image = temp_image.uniq.join(", ")
-                        IngramMicroDetail.create(:url => url, :ref_id => product_code,:vendor_code => vendor_code, :title => title, :specs_html => specs_html, :specs => specs, :description_html => description_html, :description => description, :image => temp_image)
-                        $logger.info "Inserted #{product_code}"
                       rescue
                         begin
                           IngramMicroDetail.create(:url => url, :ref_id => product_code)
