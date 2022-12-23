@@ -131,7 +131,7 @@ class IngramMicroDataBuilderAgent
                     if exist_data.count == 0
                       begin
                         browser.goto "#{url}"
-                        sleep 2
+                        sleep 5
                         doc = Nokogiri::HTML.parse(browser.html)
                         title = doc.css("div.clsProductFullDesc").text.gsub("Less","").strip() rescue ""
                         if title.to_s != ''
